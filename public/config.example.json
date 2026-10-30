@@ -1,0 +1,8 @@
+{
+  "apiBaseUrl": "https://api.your-domain.example",
+  "map": {
+    "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "attribution": "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
+  },
+  "geocoder": { "provider": "nominatim", "baseUrl": "https://nominatim.openstreetmap.org", "countryCodes": "ma" }
+}

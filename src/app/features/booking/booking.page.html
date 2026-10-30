@@ -1,0 +1,99 @@
+@if (result(); as b) {
+  <div class="container done fade-in">
+    <div class="done__card card card--pad">
+      <div class="done__icon" [class.ok]="b.status === 'confirmed'"><app-icon [name]="b.status === 'confirmed' ? 'check-circle' : 'hourglass'" [size]="34" /></div>
+      <h1>{{ b.status === 'confirmed' ? 'Booking confirmed' : 'Request sent' }}</h1>
+      <p class="lead">{{ b.status === 'confirmed' ? b.photographerName + ' confirmed your session automatically.' : 'Waiting for ' + b.photographerName + ' to confirm. You are not booked until the status changes to Confirmed.' }}</p>
+      <div class="ref"><span class="xs muted">Booking reference</span><strong>{{ b.reference }}</strong></div>
+      <dl class="sum"><div><dt>Session</dt><dd>{{ b.serviceTitle }} — {{ b.packageName }}</dd></div><div><dt>When</dt><dd>{{ fmtDate(b.date) }}, {{ b.startTime }}–{{ b.endTime }}</dd></div><div><dt>Where</dt><dd>{{ b.location.address }}, {{ b.location.city }}</dd></div>
+        <div><dt>Total</dt><dd><strong>{{ b.pricing.pricingModel === 'quote' ? 'To be quoted' : money(b.pricing.total) }}</strong></dd></div><div><dt>Status</dt><dd>{{ b.status }}</dd></div><div><dt>Payment</dt><dd>Unpaid — no payment was taken.</dd></div></dl>
+      <div class="notice notice--info"><app-icon name="info" [size]="18" /><span>Online payment isn't available in this prototype. Agree payment directly with the photographer; the amount above is what the server calculated.</span></div>
+      <div class="row"><a class="btn btn--primary" routerLink="/account/bookings">View my bookings</a><a class="btn btn--outline" routerLink="/account/messages">Message photographer</a><a class="btn btn--ghost" routerLink="/discover">Keep browsing</a></div>
+    </div>
+  </div>
+} @else {
+<div class="container book">
+  @if (data.error()) { <app-error-state [error]="data.error()" title="We couldn't start your booking" (retry)="data.reload()" /> }
+  @else if (data.isLoading() && !profile()) { <div class="skeleton" style="height: 420px"></div> }
+  @else if (profile(); as p) {
+    <header class="bh"><a class="back" [routerLink]="['/photographers', p.id]"><app-icon name="arrow-left" [size]="16" />Back to profile</a><h1>Book {{ p.displayName }}</h1></header>
+    <ol class="steps" aria-label="Booking steps">@for (s of steps; track s; let i = $index) { <li [class.on]="i === step()" [class.is-done]="i < step()"><button type="button" (click)="go(i)" [disabled]="i > maxStep() && i !== step() + 1" [attr.aria-current]="i === step() ? 'step' : null"><span class="n">@if (i < step()) { <app-icon name="check" [size]="14" /> } @else { {{ i + 1 }} }</span><span class="l">{{ s }}</span></button></li> }</ol>
+
+    <div class="cols">
+      <section class="panel card card--pad" aria-live="polite">
+        @switch (step()) {
+          @case (0) {
+            <h2>Choose a service &amp; package</h2>
+            @if (!services().length) { <p class="muted">This photographer has no published services right now.</p> }
+            <div class="row svc" role="tablist" aria-label="Service">@for (s of services(); track s.id) { <button type="button" role="tab" class="chip" [attr.aria-selected]="svc()?.id === s.id" [class.is-active]="svc()?.id === s.id" (click)="pickService(s)">{{ s.title }}</button> }</div>
+            @if (svc(); as s) { <p class="small muted">{{ s.description }}</p><p class="small"><strong>Pricing model:</strong> {{ s.pricingModel === 'quote' ? 'Custom quote — price confirmed by the photographer' : s.pricingModel === 'hourly' ? 'Hourly rate × hours' : s.pricingModel === 'starting' ? 'Starting price — photographer confirms final price' : 'Fixed price' }}</p> }
+            <div class="pk">@for (k of pkgs(); track k.id) { <app-package-card [pkg]="k" [model]="svc()?.pricingModel ?? 'fixed'" [selectable]="true" [selected]="packageId() === k.id" (chosen)="pickPackage($event)" /> }</div>
+          }
+          @case (1) {
+            <h2>Pick a date &amp; time</h2>
+            @if (hourly()) { <div class="hrs"><span class="field__label">Session length</span><div class="stepper"><button type="button" class="btn btn--outline btn--icon btn--sm" aria-label="Fewer hours" (click)="setHours(hours() - 1)"><app-icon name="minus" [size]="14" /></button><strong>{{ hours() }} h</strong><button type="button" class="btn btn--outline btn--icon btn--sm" aria-label="More hours" (click)="setHours(hours() + 1)"><app-icon name="plus" [size]="14" /></button></div></div> }
+            <div class="dt"><div><app-month-calendar [month]="month()" [selected]="day()" [marks]="marks()" [isDisabled]="disabledDay()" (monthChange)="month.set($event)" (picked)="pickDay($event)" />@if (open.isLoading()) { <p class="xs muted">Checking availability…</p> }@if (open.error()) { <app-error-state [error]="open.error()" (retry)="open.reload()" /> }</div>
+              <div><h3>{{ day() ? fmtDate(day()!) : 'Select a date' }}</h3>
+                @if (!day()) { <p class="muted small">Dates with a green dot have free slots. Booked, blocked and too-soon times are never offered.</p> }
+                @else if (slots.isLoading()) { <div class="slots">@for (x of [1,2,3,4,5,6]; track x) { <span class="skeleton" style="height: 40px; width: 74px"></span> }</div> }
+                @else { <div class="slots" role="radiogroup" aria-label="Start time">@for (s of freeSlots(); track s.start) { <button type="button" role="radio" class="slot" [attr.aria-checked]="startTime() === s.start" [class.on]="startTime() === s.start" (click)="startTime.set(s.start)">{{ s.start }}</button> }</div>
+                  @if (!freeSlots().length) { <p class="muted">No free times on this date — try another day.</p> }
+                  @if (startTime()) { <p class="small">Session: <strong>{{ startTime() }} – {{ endTime() }}</strong> ({{ duration() / 60 }} h)</p> } }</div></div>
+          }
+          @case (2) {
+            <h2>Where is the session?</h2>
+            <div class="stack">
+              <label class="field"><span class="field__label">Type of shoot</span><select class="select" [ngModel]="category()" (ngModelChange)="category.set($event)" name="cat">@for (c of cats | keyvalue; track c.key) { <option [value]="c.key">{{ c.value }}</option> }</select></label>
+              @if (savedLocations().length) { <div class="row"><span class="small muted">Saved:</span>@for (l of savedLocations(); track l.id) { <button type="button" class="chip" (click)="pickSaved(l.id)">{{ l.label }}</button> }</div> }
+              <div><span class="field__label">Search for the venue or address</span><app-location-search placeholder="Venue, street or neighbourhood" label="Event location" [locate]="true" (picked)="placePicked($event)" /></div>
+              <label class="field"><span class="field__label">Address *</span><input class="input" [ngModel]="address()" (ngModelChange)="address.set($event)" name="addr" placeholder="Street, venue name" autocomplete="street-address" /></label>
+              <label class="field"><span class="field__label">City *</span><input class="input" [ngModel]="city()" (ngModelChange)="city.set($event)" name="city" /></label>
+              <div><span class="field__label">Pin on map (optional)</span><app-location-picker [point]="mapPoint()" [height]="260" (pointChange)="point.set($event)" /><p class="xs muted">The photographer only sees this after you send the request. Travel fees (if any) are set by the photographer — none are estimated here.</p></div>
+            </div>
+          }
+          @case (3) {
+            <h2>Extras &amp; promo code</h2>
+            @if (addOns().length) { <fieldset class="ao"><legend class="sr-only">Optional add-ons</legend>@for (a of addOns(); track a.id) { <label class="check ao__i" [class.on]="addOnIds().includes(a.id)"><input type="checkbox" [checked]="addOnIds().includes(a.id)" (change)="toggleAddOn(a.id)" /><span class="grow">{{ a.name }}</span><strong>+{{ money(a.price) }}</strong></label> }</fieldset> }
+            @else { <p class="muted">This service has no optional add-ons.</p> }
+            <div class="promo"><label class="field"><span class="field__label">Promo code</span><div class="row"><input class="input pi" [ngModel]="promoInput()" (ngModelChange)="promoInput.set($event)" name="promo" placeholder="e.g. WELCOME10" autocapitalize="characters" />@if (promo()) { <button type="button" class="btn btn--outline" (click)="clearPromo()">Remove</button> } @else { <button type="button" class="btn btn--outline" [disabled]="!promoInput().trim()" (click)="applyPromo()">Apply</button> }</div></label>
+              @if (promoError()) { <p class="field__error" role="alert">{{ promoError() }}</p> } @else if (q()?.promoCode) { <p class="small ok"><app-icon name="check-circle" [size]="14" /> {{ q()!.promoCode }} applied — saves {{ money(q()!.discount) }}</p> }</div>
+            <label class="field"><span class="field__label">Special requests (optional)</span><textarea class="textarea" rows="4" maxlength="1000" [ngModel]="notes()" (ngModelChange)="notes.set($event)" name="notes" placeholder="Event details, must-have shots, guest count…"></textarea><span class="field__hint">{{ notes().length }}/1000</span></label>
+          }
+          @case (4) {
+            <h2>Review &amp; send request</h2>
+            <dl class="sum"><div><dt>Photographer</dt><dd>{{ p.displayName }}</dd></div><div><dt>Service</dt><dd>{{ svc()?.title }} · {{ pkg()?.name }}</dd></div><div><dt>When</dt><dd>{{ day() ? fmtDate(day()!) : '' }}, {{ startTime() }}–{{ endTime() }}</dd></div><div><dt>Where</dt><dd>{{ address() }}, {{ city() }}</dd></div>@if (notes()) { <div><dt>Notes</dt><dd>{{ notes() }}</dd></div> }</dl>
+            <div class="pol"><h3><app-icon name="scale" [size]="16" /> Cancellation policy</h3><p class="small">{{ p.cancellationPolicy.summary }}</p></div>
+            @if (priceChanged()) { <div class="notice notice--warn" role="alert"><app-icon name="alert-triangle" [size]="18" /><span>{{ formError() }} The summary now shows the updated price — please review and accept again.</span></div> }
+            @else if (formError()) { <div class="notice notice--error" role="alert">{{ formError() }}</div> }
+            <label class="check"><input type="checkbox" [ngModel]="accepted()" (ngModelChange)="accepted.set($event)" name="acc" /><span>I understand this is a <strong>request</strong>: I'm only booked once {{ p.displayName.split(' ')[0] }} confirms, and no payment is taken now. I accept the cancellation policy above.</span></label>
+          }
+        }
+        @if (showStepError() && stepError()) { <p class="field__error err" role="alert"><app-icon name="alert-triangle" [size]="14" />{{ stepError() }}</p> }
+        <div class="nav"><button type="button" class="btn btn--outline" [disabled]="step() === 0" (click)="back()"><app-icon name="arrow-left" [size]="16" />Back</button>
+          @if (step() < 4) { <button type="button" class="btn btn--primary" (click)="next()">Continue<app-icon name="arrow-right" [size]="16" /></button> }
+          @else { <button type="button" class="btn btn--primary btn--lg" [disabled]="submitting() || !accepted() || !q()" (click)="submit()">{{ submitting() ? 'Sending…' : 'Send booking request' }}</button> }</div>
+      </section>
+
+      <aside class="summary card card--pad" aria-label="Price summary">
+        <div class="who"><img [src]="p.avatarUrl" alt="" width="44" height="44" /><div><strong>{{ p.displayName }}</strong><div class="small muted">{{ p.city }}</div></div></div>
+        @if (pkg(); as k) {
+          <div class="sel"><app-tier-badge [tier]="k.tier" /><div><strong>{{ k.name }}</strong><div class="small muted">{{ svc()?.title }}</div></div></div>
+          @if (day() && startTime()) { <div class="small"><app-icon name="calendar" [size]="14" /> {{ day() }} · {{ startTime() }}–{{ endTime() }}</div> }
+          <hr class="divider" />
+          @if (quote.isLoading() && !q()) { <span class="skeleton" style="height: 90px"></span> }
+          @else if (quote.error() && !promoError()) { <app-error-state [error]="quote.error()" title="Can't calculate the price" (retry)="quote.reload()" /> }
+          @else if (q(); as pr) {
+            <dl class="pr" [style.opacity]="quote.isLoading() ? .5 : 1">
+              <div><dt>{{ svc()?.pricingModel === 'hourly' ? money(k.price ?? 0) + ' × ' + hours() + ' h' : 'Package' }}</dt><dd>{{ pr.pricingModel === 'quote' ? 'Quote' : money(pr.packagePrice) }}</dd></div>
+              @for (a of chosenAddOns(); track a.id) { <div><dt>{{ a.name }}</dt><dd>+{{ money(a.price) }}</dd></div> }
+              @if (pr.discount) { <div class="disc"><dt>Promo {{ pr.promoCode }}</dt><dd>−{{ money(pr.discount) }}</dd></div> }
+              <div class="tot"><dt>Total</dt><dd>{{ pr.pricingModel === 'quote' ? 'To be quoted' : money(pr.total) }}</dd></div></dl>
+            @if (pr.pricingModel === 'starting') { <p class="xs muted">Starting price — the photographer confirms the final amount.</p> } @else if (pr.pricingModel === 'quote') { <p class="xs muted">The photographer will send you a quote after your request.</p> }
+            <p class="xs muted"><app-icon name="shield-check" [size]="12" /> Price calculated by the server. Travel fees, if any, are agreed with the photographer.</p>
+          }
+        } @else { <p class="muted small">Choose a package to see the price breakdown.</p> }
+      </aside>
+    </div>
+  }
+</div>
+}

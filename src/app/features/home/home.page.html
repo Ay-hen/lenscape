@@ -1,0 +1,113 @@
+<!-- HERO -->
+<section class="hero">
+  <div class="hero__bg" aria-hidden="true"><img src="img/hero-lens.jpg" alt="" fetchpriority="high" /><div class="hero__shade"></div></div>
+  <div class="container hero__inner">
+    <p class="eyebrow hero__eyebrow">Book trusted photographers near you</p>
+    <h1>Find the photographer who&nbsp;<em>sees your day</em> the way you do.</h1>
+    <p class="hero__lead">Compare real prices on a map, browse portfolios and book weddings, portraits, events and more — in minutes.</p>
+
+    <form class="search" [formGroup]="form" (ngSubmit)="search()" role="search" aria-label="Find photographers">
+      <label class="s-field"><span><app-icon name="map-pin" [size]="14" />Where</span><input class="s-in" formControlName="q" list="city-list" placeholder="City or neighbourhood" autocomplete="off" /></label>
+      <datalist id="city-list">@for (c of cities; track c) { <option [value]="c"></option> }</datalist>
+      <label class="s-field"><span><app-icon name="camera" [size]="14" />Type of shoot</span>
+        <select class="s-in" formControlName="category"><option value="">Any</option>@for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }</select></label>
+      <label class="s-field"><span><app-icon name="calendar" [size]="14" />When</span><input class="s-in" type="date" formControlName="date" [min]="today" /></label>
+      <label class="s-field"><span><app-icon name="banknote" [size]="14" />Max budget (MAD)</span><input class="s-in" type="number" min="0" step="100" formControlName="maxPrice" placeholder="Any budget" /></label>
+      <button class="btn btn--primary btn--lg s-btn" type="submit"><app-icon name="search" />Search</button>
+    </form>
+    <div class="hero__links"><a routerLink="/discover" [queryParams]="{ view: 'map' }" class="pill"><app-icon name="map" [size]="15" />Explore the price map</a><span>Popular:</span>
+      <a routerLink="/discover" [queryParams]="{ category: 'wedding' }">Weddings</a><a routerLink="/discover" [queryParams]="{ category: 'portrait' }">Portraits</a><a routerLink="/discover" [queryParams]="{ category: 'event' }">Events</a></div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="sec container" aria-labelledby="cat-h">
+  <div class="sec__head"><div><p class="eyebrow">Browse by occasion</p><h2 id="cat-h">Popular photography categories</h2></div><a routerLink="/discover" class="more">All photographers <app-icon name="arrow-right" [size]="16" /></a></div>
+  <div class="cats">
+    @if (data.isLoading()) { @for (s of skeletons; track s) { <div class="skeleton cat-sk"></div> } }
+    @for (c of categories(); track c.id) {
+      <a class="cat" [routerLink]="['/discover']" [queryParams]="{ category: c.id }"><img [src]="c.image" alt="" loading="lazy" /><span class="cat__shade"></span><span class="cat__label"><app-icon [name]="c.icon" [size]="18" />{{ c.name }}</span></a>
+    }
+  </div>
+</section>
+
+@if (data.error()) { <div class="container"><app-error-state [error]="data.error()" (retry)="data.reload()" /></div> }
+
+<!-- FEATURED -->
+<section class="sec container" aria-labelledby="feat-h">
+  <div class="sec__head"><div><p class="eyebrow">Hand-picked</p><h2 id="feat-h">Featured photographers</h2></div><a routerLink="/discover" class="more">See all <app-icon name="arrow-right" [size]="16" /></a></div>
+  <div class="grid grid--4 cards">
+    @if (data.isLoading()) { @for (s of skeletons; track s) { <div class="skeleton" style="height: 360px"></div> } }
+    @for (p of data.value()?.featured?.items ?? []; track p.id) { <app-photographer-card [p]="p" /> }
+  </div>
+</section>
+
+<!-- BEST VALUE PACKAGES -->
+<section class="sec sec--tint">
+  <div class="container" aria-labelledby="val-h">
+    <div class="sec__head"><div><p class="eyebrow">Best value</p><h2 id="val-h">Packages that give you the most for your budget</h2><p class="muted sub">Ranked by edited photos per MAD and photographer rating. Tier colours are just labels — every photographer sets their own price.</p></div></div>
+    <div class="grid grid--4 cards">
+      @if (data.isLoading()) { @for (s of skeletons; track s) { <div class="skeleton" style="height: 420px"></div> } }
+      @for (h of data.value()?.value ?? []; track h.pkg.id) {
+        <a class="hl" [routerLink]="['/photographers', h.photographer.id]" [attr.aria-label]="h.pkg.name + ' package by ' + h.photographer.displayName">
+          <app-package-card [pkg]="h.pkg" [model]="h.pricingModel"><div class="hl__by"><img [src]="h.photographer.avatarUrl" alt="" width="28" height="28" /><span>{{ h.photographer.displayName }} · {{ h.photographer.city }}</span></div></app-package-card></a>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- TOP RATED -->
+<section class="sec container" aria-labelledby="top-h">
+  <div class="sec__head"><div><p class="eyebrow">Loved by customers</p><h2 id="top-h">Highly rated professionals</h2></div><a routerLink="/discover" [queryParams]="{ sort: 'rating' }" class="more">Top rated <app-icon name="arrow-right" [size]="16" /></a></div>
+  <div class="grid grid--4 cards">
+    @if (data.isLoading()) { @for (s of skeletons; track s) { <div class="skeleton" style="height: 360px"></div> } }
+    @for (p of data.value()?.top?.items ?? []; track p.id) { <app-photographer-card [p]="p" /> }
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="sec container" id="how" aria-labelledby="how-h">
+  <div class="center"><p class="eyebrow">Simple by design</p><h2 id="how-h">How it works</h2></div>
+  <ol class="steps">
+    <li><span class="num">1</span><app-icon name="search" [size]="26" /><h3>Search &amp; compare</h3><p>Filter by location, date and budget. See starting prices right on the map.</p></li>
+    <li><span class="num">2</span><app-icon name="layers" [size]="26" /><h3>Pick a package</h3><p>Compare Bronze to Platinum packages side by side — deliverables, duration and price.</p></li>
+    <li><span class="num">3</span><app-icon name="calendar-check" [size]="26" /><h3>Request your slot</h3><p>Choose a free time. The photographer confirms — you're only booked once it says <strong>Confirmed</strong>.</p></li>
+    <li><span class="num">4</span><app-icon name="camera" [size]="26" /><h3>Enjoy &amp; review</h3><p>Get your gallery and leave a review after your session.</p></li>
+  </ol>
+</section>
+
+<!-- TESTIMONIALS (real reviews only) -->
+@if (testimonials().length) {
+<section class="sec sec--tint"><div class="container" aria-labelledby="t-h">
+  <div class="center"><p class="eyebrow">Customer stories</p><h2 id="t-h">What customers say</h2></div>
+  <div class="grid grid--3 quotes">@for (t of testimonials(); track t.id) { <figure class="quote card card--pad"><app-icon name="quote" [size]="22" /><blockquote>{{ t.comment }}</blockquote><figcaption><strong>{{ t.serviceTitle }}</strong><span class="muted small">{{ t.customerName }} · {{ t.photographerName }}</span></figcaption></figure> }</div></div></section>
+}
+
+<!-- TRUST -->
+<section class="sec container" id="trust" aria-labelledby="trust-h">
+  <div class="trust card">
+    <div class="trust__copy"><p class="eyebrow">Trust &amp; safety</p><h2 id="trust-h">Booking you can rely on</h2>
+      <p class="muted">We keep the marketplace honest: transparent prices, clear policies and a review team behind every listing.</p></div>
+    <ul class="trust__list">
+      <li><app-icon name="shield-check" [size]="22" /><div><strong>Reviewed profiles</strong><span>Every photographer is approved before going live. “Verified identity” is shown only after our team actually checks ID.</span></div></li>
+      <li><app-icon name="receipt" [size]="22" /><div><strong>Clear pricing</strong><span>Fixed, hourly, starting and custom-quote prices are always labelled differently.</span></div></li>
+      <li><app-icon name="map-pin" [size]="22" /><div><strong>Private addresses</strong><span>Photographers appear on the map by approximate area, never their exact address.</span></div></li>
+      <li><app-icon name="scale" [size]="22" /><div><strong>Fair cancellation</strong><span>Each profile shows its cancellation policy before you book. Reviews come only from completed bookings.</span></div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec container narrow" id="faq" aria-labelledby="faq-h">
+  <div class="center"><p class="eyebrow">Questions</p><h2 id="faq-h">Frequently asked questions</h2></div>
+  <div class="faq">
+    @for (f of data.value()?.faqs ?? []; track f.id) {
+      <div class="faq__item"><h3><button type="button" [attr.aria-expanded]="openFaq() === f.id" [attr.aria-controls]="'ans-' + f.id" (click)="openFaq.set(openFaq() === f.id ? null : f.id)">{{ f.q }}<app-icon [name]="openFaq() === f.id ? 'minus' : 'plus'" [size]="18" /></button></h3>
+        @if (openFaq() === f.id) { <p [id]="'ans-' + f.id" class="fade-in">{{ f.a }}</p> }</div>
+    }
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="container"><div class="cta"><div><h2>Are you a photographer?</h2><p>Create your packages, set your location on the map and let customers book you — with automation that saves you hours every week.</p></div>
+  <a class="btn btn--lg cta__btn" routerLink="/register/photographer">Start your studio profile<app-icon name="arrow-right" /></a></div></section>

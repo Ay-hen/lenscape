@@ -1,0 +1,186 @@
+// ──────────────────────────────────────────────────────────────
+// Design tokens — single source of truth for the visual system.
+// Every colour, size and shadow in the app should come from here.
+// ──────────────────────────────────────────────────────────────
+
+:root {
+  color-scheme: light;
+
+  // Brand — blue. (The logo mark keeps its own original brown; it is hard-coded in layouts/logo.component.ts.)
+  --c-primary-50: #eff6ff;
+  --c-primary-100: #dbeafe;
+  --c-primary-200: #bfdbfe;
+  --c-primary-500: #3b82f6;
+  --c-primary-600: #2563eb;   // solid fills (buttons, badges) — white text on it is 5.2:1
+  --c-primary-700: #1d4ed8;   // hover fill
+  --c-primary-900: #1e3a8a;
+  --c-primary-text: #1d4ed8;  // primary-coloured TEXT/links on surfaces (flips to a light blue in dark mode)
+  --c-secondary-50: #e9f2ef;
+  --c-secondary-500: #2f6b5c;
+  --c-secondary-600: #1f4d43;
+  --c-secondary-700: #17392f;
+  --c-accent: #e0a526;
+  --c-accent-soft: #fbf0d3;
+  --c-accent-ink: #7a5600;
+
+  // Neutrals (cool slate)
+  --c-bg: #f7f9fc;
+  --c-bg-glass: rgb(247 249 252 / 88%);
+  --c-surface: #ffffff;
+  --c-surface-2: #eef2f8;
+  --c-surface-3: #e2e8f2;
+  --c-border: #e2e8f0;
+  --c-border-strong: #cbd5e1;
+  --c-text: #0f172a;
+  --c-text-muted: #475569;
+  --c-text-subtle: #5c6c84;
+  --c-ink: #0b1220;           // strongest TEXT colour (headings). Never use it as a background — use --c-ink-bg / --c-chrome.
+  --c-ink-bg: #0f172a;        // dark fill with white text (active chips, toasts, dark buttons, selected slots)
+  --c-chrome: #0b1220;        // always-dark app chrome: footer, dashboard sidebar, announcement banner
+  --c-chrome-text: #cbd5e1;
+  --c-chrome-muted: #94a3b8;
+  --c-chrome-line: #27324a;
+  --c-on-primary: #ffffff;
+
+  // Status
+  --c-success: #1e7b4f;
+  --c-success-bg: #e5f4ec;
+  --c-warning: #8f5d0c;
+  --c-warning-bg: #fcf0d6;
+  --c-error: #b42d24;
+  --c-error-solid: #c0261d;
+  --c-success-solid: #1e7b4f;
+  --c-error-bg: #fbe8e6;
+  --c-info: #245b94;
+  --c-info-bg: #e4eef8;
+
+  // Package tiers (visual classification only — never a price rule)
+  --tier-bronze-fg: #8a4f22;
+  --tier-bronze-bg: #f8eadd;
+  --tier-bronze-border: #d9a877;
+  --tier-bronze-grad: linear-gradient(135deg, #f8eadd, #f0d2b3);
+  --tier-silver-fg: #3f4b5c;
+  --tier-silver-bg: #eef1f5;
+  --tier-silver-border: #b6c0cd;
+  --tier-silver-grad: linear-gradient(135deg, #f3f5f8, #dde3ea);
+  --tier-gold-fg: #7d5f0b;
+  --tier-gold-bg: #fbf3d6;
+  --tier-gold-border: #d3ae43;
+  --tier-gold-grad: linear-gradient(135deg, #fcf6dc, #f1dc9b);
+  --tier-platinum-fg: #4a3d80;
+  --tier-platinum-bg: #efebfa;
+  --tier-platinum-border: #a99dd8;
+  --tier-platinum-grad: linear-gradient(135deg, #f3f0fc, #d8d0f0);
+
+  // Typography
+  --font-body: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: var(--font-body);  // kept as an alias so existing components keep working — one family everywhere
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.25rem;
+  --fs-4xl: clamp(2.1rem, 4.2vw, 3.3rem);
+
+  // Spacing (4px scale)
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4.5rem;
+  --sp-9: 6rem;
+
+  // Radii
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  // Elevation
+  --shadow-1: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 1px rgb(15 23 42 / 4%);
+  --shadow-2: 0 4px 12px rgb(15 23 42 / 8%), 0 1px 3px rgb(15 23 42 / 6%);
+  --shadow-3: 0 12px 32px rgb(15 23 42 / 12%), 0 2px 6px rgb(15 23 42 / 6%);
+  --shadow-focus: 0 0 0 3px rgb(37 99 235 / 30%);
+
+  // Layout
+  --container: 1200px;
+  --container-wide: 1360px;
+  --header-h: 68px;
+  --sidebar-w: 256px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 180ms;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Dark theme. Activated by <html data-theme="dark"> (set before first paint by the inline script in
+// index.html and afterwards by ThemeService). Only tokens change — components never branch on theme.
+// ──────────────────────────────────────────────────────────────
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --c-primary-50: #0f1d3d;
+  --c-primary-100: #172a55;
+  --c-primary-200: #1e3a8a;
+  --c-primary-900: #dbeafe;
+  --c-primary-text: #8ab4ff;
+  --c-accent-soft: #3a2d0a;
+  --c-accent-ink: #fcd34d;
+
+  --c-bg: #0a0f1c;
+  --c-bg-glass: rgb(10 15 28 / 86%);
+  --c-surface: #111a2e;
+  --c-surface-2: #1a2640;
+  --c-surface-3: #243252;
+  --c-border: #25324f;
+  --c-border-strong: #36466b;
+  --c-text: #e8eef9;
+  --c-text-muted: #a3b3cf;
+  --c-text-subtle: #8497b8;
+  --c-ink: #f4f7fd;
+  --c-ink-bg: #2f4a85;
+  --c-chrome: #060a14;
+  --c-chrome-text: #cbd5e1;
+  --c-chrome-muted: #94a3b8;
+  --c-chrome-line: #1d2740;
+
+  --c-success: #4ade80;
+  --c-success-bg: #0d2a1c;
+  --c-warning: #fbbf24;
+  --c-warning-bg: #2e2308;
+  --c-error: #f87171;
+  --c-error-bg: #321416;
+  --c-info: #7cc0ff;
+  --c-info-bg: #0f2540;
+
+  --tier-bronze-fg: #f0b27a;  --tier-bronze-bg: #2c1c10;  --tier-bronze-border: #8a5a30;  --tier-bronze-grad: linear-gradient(135deg, #2c1c10, #3d2815);
+  --tier-silver-fg: #c3cddb;  --tier-silver-bg: #1c2431;  --tier-silver-border: #4b586b;  --tier-silver-grad: linear-gradient(135deg, #1f2836, #2a3547);
+  --tier-gold-fg: #f3d36b;    --tier-gold-bg: #2d2509;    --tier-gold-border: #8f7420;    --tier-gold-grad: linear-gradient(135deg, #2d2509, #403210);
+  --tier-platinum-fg: #c4b9f5; --tier-platinum-bg: #1f1a3a; --tier-platinum-border: #5b4fa0; --tier-platinum-grad: linear-gradient(135deg, #1f1a3a, #2b2452);
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 40%), 0 1px 1px rgb(0 0 0 / 30%);
+  --shadow-2: 0 4px 12px rgb(0 0 0 / 45%), 0 1px 3px rgb(0 0 0 / 35%);
+  --shadow-3: 0 12px 32px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 40%);
+  --shadow-focus: 0 0 0 3px rgb(96 165 250 / 40%);
+}
+
+// Breakpoints (used via mixins; CSS vars can't be used in media queries)
+$bp-sm: 640px;
+$bp-md: 900px;
+$bp-lg: 1180px;
+
+@mixin up($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+@mixin down($bp) {
+  @media (max-width: #{$bp - 1px}) {
+    @content;
+  }
+}

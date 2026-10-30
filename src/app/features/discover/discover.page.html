@@ -1,0 +1,76 @@
+<div class="bar"><div class="container container--wide bar__in">
+  <form class="qsearch" (ngSubmit)="submitText()" role="search"><app-icon name="search" [size]="16" />
+    <input class="input" type="search" name="q" aria-label="Search photographers, cities or styles" placeholder="Name, city, style…" [ngModel]="qText()" (ngModelChange)="qText.set($event)" /></form>
+  <select class="select cat" aria-label="Category" [ngModel]="query().categoryId ?? ''" (ngModelChange)="nav({ category: $event })"><option value="">All categories</option>@for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }</select>
+  <input class="input date" type="date" aria-label="Available on date" [min]="today" [ngModel]="query().availableOn ?? ''" (ngModelChange)="nav({ date: $event })" />
+  <app-location-search class="loc" placeholder="Near… (city or address)" label="Search near a place" (picked)="placePicked($event)" />
+  <button type="button" class="btn btn--outline" (click)="filtersOpen.set(true)"><app-icon name="sliders" [size]="16" />Filters@if (activeFilters().length) { <span class="cnt">{{ activeFilters().length }}</span> }</button>
+</div></div>
+
+<div class="container container--wide head">
+  <div><h1>{{ list.value()?.total ?? '…' }} photographers</h1>
+    @if (activeFilters().length) { <ul class="chips" aria-label="Active filters">@for (f of activeFilters(); track f.label) { <li><button type="button" class="chip is-active" (click)="clear(f.key)" [attr.aria-label]="'Remove filter ' + f.label">{{ f.label }}<app-icon name="x" [size]="13" /></button></li> }<li><button type="button" class="link-btn small" (click)="resetAll()">Clear all</button></li></ul> }</div>
+  <div class="tools">
+    @if (saved.items().length) { <select class="select sv" aria-label="Saved searches" (change)="runSaved(saved.items()[+$any($event.target).value]); $any($event.target).selectedIndex = 0"><option>Saved searches ({{ saved.items().length }})</option>@for (s of saved.items(); track s.id; let i = $index) { <option [value]="i">{{ s.label }}</option> }</select> }
+    <button type="button" class="btn btn--ghost btn--sm" (click)="saveSearch()"><app-icon name="heart" [size]="14" />Save search</button>
+    <label class="sort"><span class="sr-only">Sort by</span><select class="select" [ngModel]="query().sort" (ngModelChange)="setSort($event)">
+      <option value="recommended">Recommended</option><option value="nearest" [disabled]="!center()">Nearest{{ center() ? '' : ' (pick a place)' }}</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="rating">Top rated</option><option value="popular">Most popular</option></select></label>
+    <div class="seg" role="group" aria-label="View"><button type="button" [attr.aria-pressed]="view() === 'list'" (click)="setView('list')"><app-icon name="list" [size]="16" />List</button><button type="button" [attr.aria-pressed]="view() === 'map'" (click)="setView('map')"><app-icon name="map" [size]="16" />Map</button></div>
+  </div>
+</div>
+
+<div class="container container--wide body" [class.split]="view() === 'map'">
+  <section class="results" aria-live="polite" [attr.aria-busy]="list.isLoading()">
+    @if (list.error()) { <app-error-state [error]="list.error()" (retry)="list.reload()" /> }
+    @else if (list.isLoading() && !list.value()) { <div class="grid cards">@for (s of [1,2,3,4,5,6]; track s) { <div class="skeleton" style="height: 340px"></div> }</div> }
+    @else if (list.value(); as res) {
+      @if (res.items.length === 0) { <app-empty-state icon="search" title="No photographers match your search" text="Try widening your budget, removing the date filter or searching a nearby city." actionLabel="Clear all filters" (action)="resetAll()" /> }
+      @else {
+        <div class="grid cards" [class.cards--1]="view() === 'map'" [style.opacity]="list.isLoading() ? 0.55 : 1">
+          @for (p of res.items; track p.id) { <div [id]="'card-' + p.id" (mouseenter)="hoverId.set(p.id)" (mouseleave)="hoverId.set(null)"><app-photographer-card [p]="p" [active]="selectedId() === p.id" [compare]="true" [compared]="compare.has(p.id)" (compareToggle)="toggleCompare($event)" [layout]="view() === 'map' ? 'row' : 'card'" /></div> }
+        </div>
+        <app-pagination [page]="res.page" [pageSize]="res.pageSize" [total]="res.total" (pageChange)="nav({ page: $event }, false)" />
+      }
+    }
+  </section>
+  @if (view() === 'map') {
+    <aside class="mapcol" aria-label="Map"><div class="mapbox"><app-map-view [items]="mapItems()" [selectedId]="selectedId() ?? hoverId()" [center]="center()" [radiusKm]="radius()" [fitKey]="fitKey()" (selected)="focusCard($event)" (areaSearch)="areaSearch($event)" /></div>
+      <p class="xs muted note">Prices show each photographer's starting price. Pins mark an approximate area, not an exact address.</p></aside>
+  }
+</div>
+
+@if (compare.items().length) {
+  <div class="cmpbar" role="region" aria-label="Compare photographers"><div class="container cmpbar__in"><strong>{{ compare.items().length }}/3 selected</strong>
+    <div class="grow row">@for (p of compare.items(); track p.id) { <span class="tag"><img [src]="p.avatarUrl" alt="" />{{ p.displayName }}<button type="button" [attr.aria-label]="'Remove ' + p.displayName" (click)="compare.toggle(p)"><app-icon name="x" [size]="12" /></button></span> }</div>
+    <button type="button" class="btn btn--ghost btn--sm" (click)="compare.clear()">Clear</button><button type="button" class="btn btn--primary" [disabled]="compare.items().length < 2" (click)="compareOpen.set(true)"><app-icon name="git-compare" [size]="16" />Compare</button></div></div>
+}
+
+<app-modal [open]="compareOpen()" label="Compare photographers" [wide]="true" (closed)="compareOpen.set(false)">
+  <div class="cmp"><h2>Compare photographers</h2>
+    <div class="table-wrap"><table class="table"><caption class="sr-only">Photographer comparison</caption>
+      <thead><tr><th scope="col"></th>@for (p of compare.items(); track p.id) { <th scope="col"><a [routerLink]="['/photographers', p.id]" (click)="compareOpen.set(false)">{{ p.displayName }}</a></th> }</tr></thead>
+      <tbody>
+        <tr><th scope="row">Starting price</th>@for (p of compare.items(); track p.id) { <td><strong>{{ priceText(p) }}</strong></td> }</tr>
+        <tr><th scope="row">Rating</th>@for (p of compare.items(); track p.id) { <td><app-rating [value]="p.rating" [count]="p.reviewCount" /></td> }</tr>
+        <tr><th scope="row">Experience</th>@for (p of compare.items(); track p.id) { <td>{{ p.yearsExperience }} years</td> }</tr>
+        <tr><th scope="row">City</th>@for (p of compare.items(); track p.id) { <td>{{ p.city }}</td> }</tr>
+        <tr><th scope="row">Specialties</th>@for (p of compare.items(); track p.id) { <td>@for (s of p.specialties; track s) { <span class="sp">{{ cat[s] ?? s }}</span> }</td> }</tr>
+        <tr><th scope="row">Package tiers</th>@for (p of compare.items(); track p.id) { <td>@for (t of p.tiers; track t) { <span class="tier" [class]="'tier t-' + t">{{ t }}</span> }</td> }</tr>
+        <tr><th scope="row">Service radius</th>@for (p of compare.items(); track p.id) { <td>{{ p.serviceRadiusKm }} km</td> }</tr>
+        <tr><th scope="row">Identity verified</th>@for (p of compare.items(); track p.id) { <td>{{ p.identityVerified ? 'Yes' : 'No' }}</td> }</tr>
+        <tr><th scope="row">Next available</th>@for (p of compare.items(); track p.id) { <td>{{ p.nextAvailable ?? '—' }}</td> }</tr>
+      </tbody></table></div>
+    <p class="small muted">Open each profile to compare individual packages side by side.</p></div>
+</app-modal>
+
+<app-modal [open]="filtersOpen()" label="Filters" (closed)="filtersOpen.set(false)">
+  <form class="fl" (ngSubmit)="applyFilters()"><h2>Filters</h2>
+    <fieldset><legend>Budget (MAD, starting price)</legend><div class="two"><label class="field"><span class="field__label">Min</span><input class="input" type="number" min="0" step="100" [ngModel]="draft().min" (ngModelChange)="patchDraft('min', $event)" name="min" /></label><label class="field"><span class="field__label">Max</span><input class="input" type="number" min="0" step="100" [ngModel]="draft().max" (ngModelChange)="patchDraft('max', $event)" name="max" /></label></div>
+      <p class="xs muted">Custom-quote photographers have no fixed price and are hidden when a budget is set.</p></fieldset>
+    <div class="two"><label class="field"><span class="field__label">Minimum rating</span><select class="select" [ngModel]="draft().rating" (ngModelChange)="patchDraft('rating', $event)" name="rating"><option value="">Any</option><option value="4">4.0+</option><option value="4.5">4.5+</option><option value="4.8">4.8+</option></select></label>
+      <label class="field"><span class="field__label">Experience</span><select class="select" [ngModel]="draft().exp" (ngModelChange)="patchDraft('exp', $event)" name="exp"><option value="">Any</option><option value="3">3+ years</option><option value="5">5+ years</option><option value="10">10+ years</option></select></label></div>
+    <fieldset><legend>Package type</legend><div class="row" role="radiogroup"><button type="button" class="chip" role="radio" [attr.aria-checked]="draft().tier === ''" (click)="patchDraft('tier', '')">Any</button>@for (t of tiers; track t) { <button type="button" class="chip" role="radio" [attr.aria-checked]="draft().tier === t" (click)="patchDraft('tier', t)">{{ t }}</button> }</div></fieldset>
+    @if (center()) { <label class="field"><span class="field__label">Distance from selected place: {{ draft().radius || 'any' }} km</span><input type="range" min="5" max="200" step="5" [ngModel]="draft().radius || 25" (ngModelChange)="patchDraft('radius', '' + $event)" name="radius" /><span class="field__hint">Straight-line distance, not driving time.</span></label> }
+    <label class="check"><input type="checkbox" [ngModel]="draft().verified" (ngModelChange)="patchDraft('verified', $event)" name="verified" /><span>Identity verified only</span></label>
+    <div class="acts"><button type="button" class="btn btn--ghost" (click)="resetAll(); filtersOpen.set(false)">Reset all</button><button type="submit" class="btn btn--primary">Show results</button></div></form>
+</app-modal>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lenscape — Book trusted photographers near you</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Discover photographers on a map, compare packages and prices, and book weddings, portraits, events and more with Lenscape.">
+  <meta name="theme-color" content="#2563eb">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Lenscape">
+  <meta property="og:title" content="Lenscape — Book trusted photographers near you">
+  <meta property="og:description" content="Discover photographers on a map, compare packages and prices, and book with confidence.">
+  <meta property="og:image" content="img/hero-lens.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    // Runs before first paint so the saved (or OS) theme is applied with no light-mode flash. ThemeService takes over afterwards.
+    (function () {
+      try {
+        var t = localStorage.getItem("lenscape.theme");
+        if (t !== "light" && t !== "dark") t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+    })();
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+  <noscript>Lenscape needs JavaScript to run.</noscript>
+</body>
+</html>

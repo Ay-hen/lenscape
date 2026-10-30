@@ -1,0 +1,65 @@
+<div class="bd">
+  <header class="bd__h"><div><p class="xs muted">Reference</p><h2>{{ b().reference }}</h2></div><div class="row"><app-badge [status]="b().status" /><app-badge [status]="b().paymentStatus" /></div></header>
+
+  <div class="bd__who"><img [src]="b().photographerAvatar" alt="" width="44" height="44" /><div class="grow"><strong>{{ isClient() ? b().photographerName : b().customerName }}</strong><div class="small muted">{{ isClient() ? 'Photographer' : 'Customer' }}@if (isAdmin()) { · {{ b().photographerName }} ↔ {{ b().customerName }} }</div></div>
+    @if (isClient()) { <a class="btn btn--sm btn--outline" [routerLink]="['/photographers', b().photographerId]">Profile</a> }</div>
+
+  <dl class="grid2">
+    <div><dt>Service</dt><dd>{{ b().serviceTitle }} <app-tier-badge [tier]="b().tier" /> <span class="muted">{{ b().packageName }}</span></dd></div>
+    <div><dt>When</dt><dd>{{ fmt(b().date) }}<br />{{ b().startTime }} – {{ b().endTime }}</dd></div>
+    <div><dt>Where</dt><dd>{{ b().location.address }}, {{ b().location.city }}</dd></div>
+    <div><dt>Delivery</dt><dd><app-badge [status]="b().deliveryStatus" /></dd></div>
+    @if (b().notes) { <div class="wide"><dt>Notes</dt><dd>{{ b().notes }}</dd></div> }
+  </dl>
+
+  @if (b().rescheduleRequest; as r) {
+    <div class="notice notice--warn"><app-icon name="calendar" [size]="18" /><div class="grow"><strong>Reschedule requested by {{ r.requestedBy === 'client' ? 'the customer' : 'the photographer' }}</strong><div>New time: {{ fmt(r.date) }} at {{ r.startTime }}</div></div>
+      @if ((isPhotog() && r.requestedBy === 'client') || (isClient() && r.requestedBy === 'photographer')) { <button class="btn btn--sm btn--primary" type="button" [disabled]="busy()" (click)="respond(true)">Accept</button><button class="btn btn--sm btn--outline" type="button" [disabled]="busy()" (click)="respond(false)">Decline</button> } @else { <span class="small">Awaiting response</span> }</div>
+  }
+  @if (b().cancellation; as c) { <div class="notice notice--error"><app-icon name="x-circle" [size]="18" /><div><strong>Cancelled by {{ c.by }}</strong> — {{ c.reason }}<br /><span class="small">Refund eligibility: {{ c.refundPercent }}% (if payment was made)</span></div></div> }
+  @if (b().dispute; as d) { <div class="notice notice--warn"><app-icon name="shield-alert" [size]="18" /><div class="grow"><strong>Dispute {{ d.state }}</strong><div>{{ d.reason }}</div>@if (d.resolution) { <div class="small">Resolution: {{ d.resolution }}</div> }</div>@if (isAdmin() && d.state === 'open') { <button class="btn btn--sm btn--primary" type="button" (click)="resolve()">Resolve</button> }</div> }
+
+  <section><h3>Price</h3>
+    <dl class="pr"><div><dt>{{ b().pricing.pricingModel === 'hourly' ? 'Hourly package' : 'Package' }}</dt><dd>{{ b().pricing.pricingModel === 'quote' ? 'Quote' : money(b().pricing.packagePrice) }}</dd></div>
+      @for (a of b().addOns; track a.id) { <div><dt>{{ a.name }}</dt><dd>+{{ money(a.price) }}</dd></div> }
+      @if (b().pricing.discount) { <div><dt>Promo {{ b().pricing.promoCode }}</dt><dd>−{{ money(b().pricing.discount) }}</dd></div> }
+      <div class="tot"><dt>Total</dt><dd>{{ money(b().pricing.total) }}</dd></div>
+      @if (!isClient()) { <div class="muted"><dt>Platform fee ({{ money(b().pricing.platformFee) }})</dt><dd>Est. earnings {{ money(b().pricing.total - b().pricing.platformFee) }}</dd></div> }</dl></section>
+
+  <section><h3>Timeline</h3>
+    <ol class="tl">@for (s of steps(); track s.key) { <li [class]="'tl--' + s.state"><span class="dot">@if (s.state === 'done') { <app-icon name="check" [size]="12" /> } @else if (s.state === 'bad') { <app-icon name="x" [size]="12" /> }</span>{{ s.label }}</li> }</ol>
+    <details class="hist"><summary>Activity log ({{ b().history.length }})</summary><ul>@for (h of b().history; track $index) { <li><strong>{{ h.type.replace('_', ' ') }}</strong> · {{ h.actor }} · <span class="muted">{{ when(h.at) }}</span>@if (h.note) { <div class="small muted">{{ h.note }}</div> }</li> }</ul></details></section>
+
+  <!-- ACTIONS -->
+  <section class="acts" aria-label="Actions">
+    @if (isPhotog()) {
+      @if (b().status === 'pending') { <button class="btn btn--primary" type="button" [disabled]="busy()" (click)="setStatus('confirmed')"><app-icon name="check" [size]="16" />Confirm booking</button><button class="btn btn--danger-ghost" type="button" [disabled]="busy()" (click)="setStatus('rejected')">Decline</button> }
+      @if (b().status === 'confirmed') { <button class="btn btn--primary" type="button" [disabled]="busy() || !isPast()" [title]="isPast() ? '' : 'Available on the session date'" (click)="setStatus('completed')">Mark completed</button> }
+      @if (b().status === 'completed') { <label class="field inl"><span class="field__label">Gallery delivery</span><select class="select" [ngModel]="b().deliveryStatus" (ngModelChange)="setDelivery($event)" name="dl"><option value="not_started">Not started</option><option value="editing">Editing</option><option value="delivered">Delivered</option></select></label> }
+    }
+    @if (active() && !isAdmin() && panel() !== 'reschedule') { <button class="btn btn--outline" type="button" (click)="panel.set('reschedule')"><app-icon name="calendar" [size]="16" />Reschedule</button> }
+    @if (active()) { <button class="btn btn--danger-ghost" type="button" [disabled]="busy()" (click)="cancel()">Cancel booking</button> }
+    @if (isClient() && b().status === 'completed' && !b().reviewed) { <button class="btn btn--primary" type="button" (click)="panel.set('review')"><app-icon name="star" [size]="16" />Write a review</button> }
+    @if (isClient() && b().reviewed) { <span class="small muted"><app-icon name="check-circle" [size]="14" /> Review submitted</span> }
+    @if (!isAdmin() && !b().dispute && (b().status === 'completed' || b().status === 'confirmed')) { <button class="btn btn--ghost" type="button" (click)="panel.set('dispute')"><app-icon name="flag" [size]="16" />Report a problem</button> }
+    @if (isAdmin() && b().paymentStatus === 'paid') { <button class="btn btn--outline" type="button" (click)="refund('partially_refunded')">Record partial refund</button><button class="btn btn--outline" type="button" (click)="refund('refunded')">Record full refund</button> }
+  </section>
+  @if (isClient() && active() && refundEstimate() != null) { <p class="xs muted"><app-icon name="info" [size]="12" /> If you cancel now: ~{{ refundEstimate() }}% refund of anything paid.</p> }
+
+  @if (panel() === 'reschedule') {
+    <section class="panel"><h3>Choose a new time</h3><p class="small muted">Only free slots for a {{ b().durationMinutes / 60 }}-hour session are shown. The other party must accept the change.</p>
+      <div class="rs"><app-month-calendar [month]="month()" [selected]="day()" [marks]="marks()" [isDisabled]="disabledDay()" (monthChange)="month.set($event)" (picked)="day.set($event); slot.set(null)" />
+        <div>@if (!day()) { <p class="muted small">Pick a date.</p> } @else if (slots.isLoading()) { <p class="muted small">Loading…</p> } @else { <div class="slots">@for (s of freeSlots(); track s.start) { <button type="button" class="slot" [class.on]="slot() === s.start" (click)="slot.set(s.start)">{{ s.start }}</button> } @empty { <p class="muted small">No free times that day.</p> }</div> }</div></div>
+      <div class="row"><button class="btn btn--primary" type="button" [disabled]="!day() || !slot() || busy()" (click)="sendReschedule()">Send request</button><button class="btn btn--ghost" type="button" (click)="panel.set('none')">Close</button></div></section>
+  }
+  @if (panel() === 'review') {
+    <section class="panel"><h3>How was your session?</h3><app-stars-input [value]="rating()" (changed)="rating.set($event)" />
+      <label class="field"><span class="field__label">Your review</span><textarea class="textarea" rows="4" [ngModel]="comment()" (ngModelChange)="comment.set($event)" name="cm" placeholder="Share what went well (min. 10 characters)"></textarea></label>
+      <div class="row"><button class="btn btn--primary" type="button" [disabled]="busy() || comment().trim().length < 10" (click)="submitReview()">Submit review</button><button class="btn btn--ghost" type="button" (click)="panel.set('none')">Close</button></div></section>
+  }
+  @if (panel() === 'dispute') {
+    <section class="panel"><h3>Report a problem</h3><p class="small muted">Describe what went wrong. Our team will review and contact both parties.</p>
+      <textarea class="textarea" rows="4" [ngModel]="reason()" (ngModelChange)="reason.set($event)" name="dr" aria-label="Describe the problem"></textarea>
+      <div class="row"><button class="btn btn--primary" type="button" [disabled]="busy() || reason().trim().length < 10" (click)="submitDispute()">Open dispute</button><button class="btn btn--ghost" type="button" (click)="panel.set('none')">Close</button></div></section>
+  }
+</div>

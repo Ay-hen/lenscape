@@ -1,0 +1,104 @@
+@if (data.error()) { <div class="container narrow-top"><app-error-state [error]="data.error()" title="We couldn't load this photographer" (retry)="data.reload()" /><p><a routerLink="/discover">← Back to search</a></p></div> }
+@else if (data.isLoading() && !profile()) { <div class="container"><div class="skeleton" style="height: 320px; margin-top: 20px"></div><div class="skeleton" style="height: 120px; margin-top: 16px"></div></div> }
+@else if (profile(); as p) {
+<div class="cover"><img [src]="p.coverUrl" alt="" /><div class="cover__shade"></div></div>
+<div class="container wrap">
+  <header class="id">
+    <img class="id__av" [src]="p.avatarUrl" [alt]="p.displayName" width="120" height="120" />
+    <div class="grow">
+      <div class="id__name"><h1>{{ p.displayName }}</h1>
+        @if (p.identityVerified) { <span class="vf" title="Our team has checked this photographer's ID"><app-icon name="badge-check" [size]="18" />Identity verified</span> }
+</div>
+      <p class="id__line">{{ p.headline }}</p>
+      <div class="id__meta"><span><app-icon name="map-pin" [size]="15" />{{ p.neighborhood ? p.neighborhood + ', ' : '' }}{{ p.city }}</span><span><app-icon [name]="p.workMode === 'shop' ? 'store' : 'user'" [size]="15" />{{ p.workMode === 'shop' ? 'Shop / studio' : 'Freelancer' }}</span><app-rating [value]="p.rating" [count]="p.reviewCount" /><span><app-icon name="award" [size]="15" />{{ p.yearsExperience }} yrs experience</span><span><app-icon name="clock" [size]="15" />Replies in ~{{ p.responseTimeHours }}h</span></div>
+    </div>
+    <div class="id__act">
+      <button type="button" class="btn btn--outline" (click)="fav.toggle(p.id)" [attr.aria-pressed]="fav.has(p.id)"><app-icon name="heart" [size]="16" [class.filled]="fav.has(p.id)" />{{ fav.has(p.id) ? 'Saved' : 'Save' }}</button>
+      <button type="button" class="btn btn--outline" (click)="share()"><app-icon name="share" [size]="16" />Share</button>
+      <button type="button" class="btn btn--ghost btn--icon" aria-label="Report this profile" title="Report" (click)="reportOpen.set(true)"><app-icon name="flag" [size]="16" /></button>
+    </div>
+  </header>
+
+  <nav class="anchors" aria-label="Profile sections"><a [routerLink]="[]" queryParamsHandling="preserve" fragment="about">About</a><a [routerLink]="[]" queryParamsHandling="preserve" fragment="portfolio">Portfolio</a><a [routerLink]="[]" queryParamsHandling="preserve" fragment="packages">Packages</a><a [routerLink]="[]" queryParamsHandling="preserve" fragment="availability">Availability</a><a [routerLink]="[]" queryParamsHandling="preserve" fragment="reviews">Reviews ({{ p.reviewCount }})</a><a [routerLink]="[]" queryParamsHandling="preserve" fragment="policies">Policies</a></nav>
+
+  <div class="layout">
+    <div class="main">
+      <section id="about" class="blk"><h2>About</h2><p class="bio">{{ p.bio }}</p>
+        <div class="facts"><div><h3>Specialties</h3><div class="chips">@for (s of p.specialties; track s) { <a class="chip" [routerLink]="['/discover']" [queryParams]="{ category: s }">{{ cat[s] ?? s }}</a> }</div></div>
+          <div><h3>Languages</h3><p>{{ p.languages.join(' · ') }}</p></div>
+          @if (gearGroups().length) { <div><h3>Equipment</h3>@for (g of gearGroups(); track g.kind) { <div class="gg"><span class="gk"><app-icon [name]="g.icon" [size]="14" />{{ g.plural }}</span><ul class="gl">@for (it of g.items; track it.name) { <li>{{ it.name }}</li> }</ul></div> }</div> }
+          <div><h3>{{ p.workMode === 'shop' ? 'Shop / studio' : 'Service area' }}</h3>
+            @if (p.workMode === 'shop') {
+              <p><app-icon name="store" [size]="14" /> @if (p.shopAddress) { <strong>{{ p.shopAddress }}</strong>, }{{ p.city }}</p>
+              @if (shopLinks(); as l) { <p class="row"><a class="btn btn--outline btn--sm" [href]="l.directions" target="_blank" rel="noopener noreferrer"><app-icon name="navigation" [size]="14" />Directions</a><a class="btn btn--ghost btn--sm" [href]="l.osm" target="_blank" rel="noopener noreferrer"><app-icon name="map" [size]="14" />View on map</a></p> }
+              @if (p.serviceRadiusKm > 0) { <p class="muted small">Also travels to clients up to <strong>{{ p.serviceRadiusKm }} km</strong> away. Travel fees are set by the photographer, never estimated here.</p> }
+            } @else {
+              <p><app-icon name="map-pin" [size]="14" /> Freelance photographer based in {{ p.city }}. Travels up to <strong>{{ p.serviceRadiusKm }} km</strong> from the city centre. Further trips are agreed in advance; travel fees are set by the photographer, never estimated here.</p>
+            }
+          </div></div></section>
+
+      <section id="portfolio" class="blk"><div class="blk__h"><h2>Portfolio</h2>
+        @if (p.albums.length > 1) { <div class="row" role="group" aria-label="Albums"><button type="button" class="chip" [attr.aria-pressed]="album() === 'all'" (click)="album.set('all')">All</button>@for (a of p.albums; track a.id) { @if (a.visible) { <button type="button" class="chip" [attr.aria-pressed]="album() === a.id" (click)="album.set(a.id)">{{ a.name }}</button> } }</div> }</div>
+        @if (portfolio().length) { <div class="masonry">@for (img of portfolio(); track img.id; let i = $index) { <button type="button" class="ph" (click)="lightbox.set(i)" [attr.aria-label]="'Open photo: ' + img.caption"><img [src]="img.url" [alt]="img.caption" loading="lazy" /></button> }</div> }
+        @else { <p class="muted">No portfolio images in this album yet.</p> }</section>
+
+      <section id="packages" class="blk"><div class="blk__h"><h2>Services &amp; packages</h2>
+        @if (servicePackages().length > 1) { <button type="button" class="btn btn--outline btn--sm" (click)="compareMode.set(!compareMode())"><app-icon [name]="compareMode() ? 'grid' : 'git-compare'" [size]="14" />{{ compareMode() ? 'Card view' : 'Compare packages' }}</button> }</div>
+        @if (!services().length) { <p class="muted">This photographer hasn't published services yet.</p> }
+        @else {
+          <div class="row svc" role="tablist" aria-label="Services">@for (s of services(); track s.id) { <button type="button" role="tab" class="chip" [attr.aria-selected]="activeService()?.id === s.id" [class.is-active]="activeService()?.id === s.id" (click)="pickService(s.id)">{{ s.title }}</button> }</div>
+          @if (activeService(); as s) { <div class="svcinfo"><p>{{ s.description }}</p><p class="xs muted"><strong>Pricing:</strong> {{ s.pricingModel === 'quote' ? 'Custom quote — the photographer sends a price after your request' : s.pricingModel === 'hourly' ? 'Hourly rate × session length' : s.pricingModel === 'starting' ? 'Starting price — final price confirmed by the photographer' : 'Fixed package price' }} · {{ s.travelRules }}</p></div> }
+          @if (!compareMode()) {
+            <div class="pk">@for (k of servicePackages(); track k.id) { <app-package-card [pkg]="k" [model]="modelOf(k)" [selectable]="true" [selected]="selectedPkg() === k.id" (chosen)="selectedPkg.set(k.id)" /> }</div>
+          } @else {
+            <div class="table-wrap"><table class="table cmp"><caption class="sr-only">Package comparison</caption><thead><tr><th scope="col">Feature</th>@for (k of servicePackages(); track k.id) { <th scope="col" [class]="'th-' + k.tier"><app-tier-badge [tier]="k.tier" /><div>{{ k.name }}</div></th> }</tr></thead>
+              <tbody><tr><th scope="row">Price</th>@for (k of servicePackages(); track k.id) { <td><strong>{{ price(k) }}</strong></td> }</tr>
+                <tr><th scope="row">Duration</th>@for (k of servicePackages(); track k.id) { <td>{{ k.durationMinutes / 60 }} h</td> }</tr>
+                <tr><th scope="row">Edited photos</th>@for (k of servicePackages(); track k.id) { <td>{{ k.editedPhotos }}</td> }</tr>
+                <tr><th scope="row">Locations</th>@for (k of servicePackages(); track k.id) { <td>{{ k.locations }}</td> }</tr>
+                <tr><th scope="row">Outfit changes</th>@for (k of servicePackages(); track k.id) { <td>{{ k.outfitChanges }}</td> }</tr>
+                <tr><th scope="row">Delivery</th>@for (k of servicePackages(); track k.id) { <td>{{ k.deliveryDays }} days</td> }</tr>
+                <tr><th scope="row">Includes</th>@for (k of servicePackages(); track k.id) { <td><ul>@for (i of k.includes; track i) { <li>{{ i }}</li> }</ul></td> }</tr>
+                <tr><th scope="row"></th>@for (k of servicePackages(); track k.id) { <td><a class="btn btn--primary btn--sm" [routerLink]="['/book', p.id]" [queryParams]="bookQuery(k)">Book {{ k.name }}</a></td> }</tr></tbody></table></div>
+          }
+          @if (activeService()?.addOns?.length) { <div class="addons"><h3>Optional add-ons</h3><ul>@for (a of activeService()!.addOns; track a.id) { <li><span>{{ a.name }}</span><strong>+{{ a.price }} MAD</strong></li> }</ul></div> }
+        }</section>
+
+      <section id="availability" class="blk"><h2>Availability</h2><p class="muted small">Green dots show days with at least one free slot. Final availability is confirmed when you request a booking.</p>
+        <div class="avail"><div class="avail__cal card card--pad"><app-month-calendar [month]="month()" [selected]="day()" [marks]="marks()" [isDisabled]="disabledDay()" (monthChange)="month.set($event)" (picked)="day.set($event)" />
+          @if (open.isLoading()) { <p class="xs muted">Checking availability…</p> }</div>
+          <div class="avail__slots card card--pad" aria-live="polite">@if (!day()) { <p class="muted">Select a green date to see free start times.</p> } @else { <h3>{{ fmt(day()!) }}</h3>
+            @if (slots.isLoading()) { <p class="muted">Loading…</p> } @else { <div class="slots">@for (s of slots.value() ?? []; track s.start) { @if (s.available) { <a class="slot" [routerLink]="['/book', p.id]" [queryParams]="{ service: activeService()?.id, package: selectedPkg() ?? undefined, date: day(), slot: s.start }">{{ s.start }}</a> } }</div>
+              @if (!(slots.value() ?? []).some(s => s.available)) { <p class="muted">No free times on this date.</p> } }
+            <p class="xs muted">Start times for a {{ minDurationLabel() }} session.</p> }</div></div></section>
+
+      <section id="reviews" class="blk"><div class="blk__h"><h2>Reviews</h2><app-rating [value]="avg()" [count]="p.reviewCount" /></div>
+        <div class="rv">@for (r of reviews(); track r.id) { <article class="card card--pad"><header><strong>{{ r.customerName }}</strong><app-rating [value]="r.rating" /></header><p>{{ r.comment }}</p>@if (r.reply) { <div class="reply"><strong>Reply from {{ p.displayName }}</strong><p>{{ r.reply }}</p></div> }</article> } @empty { <p class="muted">No reviews yet.</p> }</div></section>
+
+      <section id="policies" class="blk"><h2>Booking &amp; cancellation policy</h2>
+        <div class="pol card card--pad"><h3><app-icon name="scale" [size]="18" /> Cancellation</h3><p>{{ p.cancellationPolicy.summary }}</p>
+          <ul class="polg"><li><strong>{{ p.cancellationPolicy.freeCancelHours }}h+</strong><span>before: full refund</span></li><li><strong>{{ p.cancellationPolicy.partialRefundHours }}–{{ p.cancellationPolicy.freeCancelHours }}h</strong><span>{{ p.cancellationPolicy.partialRefundPercent }}% refund</span></li><li><strong>&lt; {{ p.cancellationPolicy.partialRefundHours }}h</strong><span>no refund</span></li></ul></div>
+        <ul class="pl">@for (x of p.policies; track x) { <li><app-icon name="info" [size]="14" />{{ x }}</li> }</ul></section>
+    </div>
+
+    <aside class="side" aria-label="Booking summary"><div class="bk card">
+      <div class="bk__p"><span class="xs muted">Starting price</span><strong>{{ startText() }}</strong></div>
+      @if (selectedPkg()) { <p class="small">Selected: <strong>{{ selectedName() }}</strong></p> }
+      <a class="btn btn--primary btn--lg btn--block" [routerLink]="['/book', p.id]" [queryParams]="bookQuery()">Request a booking</a>
+      <button type="button" class="btn btn--outline btn--block" (click)="message()"><app-icon name="message" [size]="16" />Message {{ p.displayName.split(' ')[0] }}</button>
+      <ul class="bk__l"><li><app-icon name="shield-check" [size]="16" />You are only booked when the photographer confirms</li><li><app-icon name="receipt" [size]="16" />Price is confirmed by the server before you send</li><li><app-icon name="map-pin" [size]="16" />Approximate area shown, never the exact address</li></ul></div></aside>
+  </div>
+
+  @if (data.value()?.similar?.length) { <section class="blk"><h2>Similar photographers</h2><div class="grid grid--4 sim">@for (s of data.value()!.similar; track s.id) { <app-photographer-card [p]="s" /> }</div></section> }
+</div>
+
+<app-modal [open]="lightbox() !== null" [dark]="true" label="Portfolio viewer" (closed)="lightbox.set(null)">
+  @if (lbImage(); as img) { <div class="lb" tabindex="0" (keydown.arrowright)="lb(1)" (keydown.arrowleft)="lb(-1)"><img [src]="img.url" [alt]="img.caption" /><div class="lb__bar"><span>{{ img.caption }} · {{ lightbox()! + 1 }} / {{ portfolio().length }}</span><div class="row"><button type="button" class="btn btn--sm btn--outline lbb" aria-label="Previous photo" (click)="lb(-1)"><app-icon name="chevron-left" /></button><button type="button" class="btn btn--sm btn--outline lbb" aria-label="Next photo" (click)="lb(1)"><app-icon name="chevron-right" /></button></div></div></div> }
+</app-modal>
+
+<app-modal [open]="reportOpen()" label="Report profile" (closed)="reportOpen.set(false)">
+  <form class="rep" (ngSubmit)="submitReport()"><h2>Report this profile</h2><p class="muted small">Tell us what's wrong. Reports are reviewed by our team; the photographer is not told who reported them.</p>
+    <label class="field"><span class="field__label">What's the problem?</span><textarea class="textarea" rows="4" name="r" [ngModel]="reportText()" (ngModelChange)="reportText.set($event)" placeholder="E.g. photos aren't theirs, misleading price…"></textarea></label>
+    <div class="acts"><button type="button" class="btn btn--outline" (click)="reportOpen.set(false)">Cancel</button><button type="submit" class="btn btn--primary" [disabled]="reportBusy() || reportText().trim().length < 10">Send report</button></div></form>
+</app-modal>
+}
