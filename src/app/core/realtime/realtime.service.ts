@@ -6,7 +6,7 @@ import { APP_ENV } from '../config/app-config';
 
 /** What the server pushes on /user/queue/messages. `typing` / `typing_stopped` are live signals from the other participant and are never stored. */
 export interface ChatEventDto {
-  type: 'message' | 'read' | 'typing' | 'typing_stopped';
+  type: 'message' | 'read' | 'typing' | 'typing_stopped' | 'deleted';
   conversationId: string;
   message?: { id: string; senderId: string; senderRole: string; text: string; at: string; clientMessageId?: string } | null;
   unreadFor?: Record<string, number> | null;
@@ -29,6 +29,8 @@ export class RealtimeService {
   /** Fires after every (re)connection so screens can catch up on what they missed while offline. */
   readonly reconnected$ = new Subject<void>();
   private client: Client | null = null; private connectedFor: string | null = null;
+  /** Conversation currently open on screen; announced again after every reconnect. */
+  private focused: string | null = null;
 
   constructor() {
     effect(() => { const token = this.session.token(); if (token) this.connect(token); else this.disconnect(); });
@@ -46,6 +48,7 @@ export class RealtimeService {
         client.subscribe('/user/queue/messages', m => this.zone.run(() => this.emit(this.chat$, m)));
         client.subscribe('/user/queue/notifications', m => this.zone.run(() => this.emit(this.notification$, m)));
         client.subscribe('/user/queue/errors', m => this.zone.run(() => this.emit(this.error$, m)));
+        if (this.focused) this.publish('/app/chat.focus', { conversationId: this.focused, active: true });
       },
       onWebSocketClose: () => this.zone.run(() => this.connected.set(false)),
       onStompError: () => this.zone.run(() => this.connected.set(false)),
@@ -63,6 +66,11 @@ export class RealtimeService {
   /** Returns false when the socket is not connected so the caller can use REST instead. */
   sendMessage(conversationId: string, text: string, clientMessageId: string): boolean {
     return this.publish('/app/chat.send', { conversationId, text, clientMessageId });
+  }
+  /** Tells the server which conversation is open on screen: messages arriving there are read at once and raise no notification. */
+  focus(conversationId: string, active: boolean): void {
+    if (active) this.focused = conversationId; else if (this.focused === conversationId) this.focused = null;
+    this.publish('/app/chat.focus', { conversationId, active });
   }
   sendTyping(conversationId: string, typing: boolean): void { this.publish('/app/chat.typing', { conversationId, typing }); }
 
