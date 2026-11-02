@@ -3,7 +3,7 @@ import {
   AdminOverview, Album, Application, AuditEntry, AutomationSettings, AvailabilityRules, Booking, BookingQuery, BookingStatus,
   Category, ChatMessage, ContentReport, CreateBookingRequest, Conversation, CustomerProfile, DateRange, GeoPoint, ISODate,
   LoginRequest, AppNotification, Page, PageQuery, PhotographerProfile, PhotographerQuery, PhotographerSummary, PlatformSettings,
-  PortfolioImage, PriceBreakdown, PromoCode, QuoteRequest, RegisterCustomerRequest, RegisterPhotographerRequest, RegistrationStarted, Review, Service,
+  PortfolioImage, PriceBreakdown, ProfileCompletion, PromoCode, QuoteRequest, RegisterCustomerRequest, RegisterPhotographerRequest, RegistrationStarted, Review, Service,
   ServicePackage, Session, Slot, User, MessageTemplate, Series, LocationInput } from '../models';
 
 /**
@@ -64,6 +64,11 @@ export abstract class PhotographerWorkspaceRepository {
   abstract savePortfolio(images: PortfolioImage[], albums: Album[]): Observable<void>;
   abstract promoCodes(): Observable<PromoCode[]>;
   abstract savePromoCodes(codes: PromoCode[]): Observable<PromoCode[]>;
+  /** @endpoint NEW GET /photographers/me/completion — weighted completion % computed by the server */
+  abstract completion(): Observable<ProfileCompletion>;
+  abstract snoozeCompletion(): Observable<ProfileCompletion>;
+  /** Rejected (409) by the server below the dismiss threshold (80 %). */
+  abstract dismissCompletion(): Observable<ProfileCompletion>;
 }
 
 export abstract class AvailabilityRepository {
@@ -109,6 +114,8 @@ export abstract class FavoriteRepository {
 export abstract class NotificationRepository {
   abstract list(): Observable<AppNotification[]>;
   abstract markRead(id: string | 'all'): Observable<void>;
+  abstract remove(id: string): Observable<void>;
+  abstract clear(scope: 'all' | 'read'): Observable<void>;
 }
 
 export abstract class MessagingRepository {
@@ -118,6 +125,8 @@ export abstract class MessagingRepository {
   abstract post(conversationId: string, text: string, clientMessageId: string): Observable<ChatMessage>;
   abstract start(photographerId: string, bookingId?: string): Observable<Conversation>;
   abstract markRead(conversationId: string): Observable<void>;
+  /** Removes the conversation from the caller's list only; the other participant keeps it. */
+  abstract deleteConversation(conversationId: string): Observable<void>;
   /** One page of history older than `before` (ISO timestamp of the oldest message already loaded), returned oldest-first. */
   abstract older(conversationId: string, before: string, limit?: number): Observable<ChatMessage[]>;
 }
