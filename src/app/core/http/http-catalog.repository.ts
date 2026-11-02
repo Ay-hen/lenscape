@@ -4,6 +4,7 @@ import { AvailabilityRepository, CatalogRepository, PackageHighlight, Photograph
 import {
   Album, AvailabilityRules, Category, ISODate, LocationInput, Page, PhotographerProfile, PhotographerQuery, PhotographerSummary, PortfolioImage, PromoCode,
   Review, Service, ServicePackage, Slot,
+  ProfileCompletion,
 } from '../models';
 import { useApi } from './api';
 import { stripPlaceholders, toParams, withProfileMedia, withSummaryMedia } from './http-util';
@@ -63,6 +64,9 @@ export class HttpWorkspaceRepository extends PhotographerWorkspaceRepository {
   override setPackageStatus(id: string, status: ServicePackage['status']): Observable<ServicePackage> { return this.api.patch<ServicePackage>(`/photographers/me/packages/${enc(id)}/status`, { status }); }
   override deletePackage(id: string): Observable<void> { return this.api.delete<void>(`/photographers/me/packages/${enc(id)}`); }
   override savePortfolio(images: PortfolioImage[], albums: Album[]): Observable<void> { return this.api.put<void>('/photographers/me/portfolio', { images, albums }); }
+  override completion(): Observable<ProfileCompletion> { return this.api.get<ProfileCompletion>('/photographers/me/completion'); }
+  override snoozeCompletion(): Observable<ProfileCompletion> { return this.api.post<ProfileCompletion>('/photographers/me/completion/snooze'); }
+  override dismissCompletion(): Observable<ProfileCompletion> { return this.api.post<ProfileCompletion>('/photographers/me/completion/dismiss'); }
   override promoCodes(): Observable<PromoCode[]> { return this.api.get<PromoCode[]>('/photographers/me/promo-codes'); }
   override savePromoCodes(codes: PromoCode[]): Observable<PromoCode[]> { return this.api.put<PromoCode[]>('/photographers/me/promo-codes', codes); }
 }

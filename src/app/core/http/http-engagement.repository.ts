@@ -27,6 +27,8 @@ export class HttpNotificationRepository extends NotificationRepository {
   override markRead(id: string | 'all'): Observable<void> {
     return (id === 'all' ? this.api.post<unknown>('/notifications/read-all') : this.api.post<unknown>(`/notifications/${enc(id)}/read`)).pipe(map(() => undefined));
   }
+  override remove(id: string): Observable<void> { return this.api.delete<unknown>(`/notifications/${enc(id)}`).pipe(map(() => undefined)); }
+  override clear(scope: 'all' | 'read'): Observable<void> { return this.api.delete<unknown>(`/notifications?scope=${scope}`).pipe(map(() => undefined)); }
 }
 
 /** /messages/** (REST). Live delivery happens over STOMP (see RealtimeService); these calls load history, send as a fallback and mark conversations read. */
@@ -51,6 +53,7 @@ export class HttpMessagingRepository extends MessagingRepository {
     return this.api.post<ConversationDto>('/messages/conversations', { username: photographerId, bookingId }).pipe(map(this.toConversation));
   }
   override markRead(conversationId: string): Observable<void> { return this.api.post<unknown>(`/messages/conversations/${enc(conversationId)}/read`).pipe(map(() => undefined)); }
+  override deleteConversation(conversationId: string): Observable<void> { return this.api.delete<unknown>(`/messages/conversations/${enc(conversationId)}`).pipe(map(() => undefined)); }
   override older(conversationId: string, before: string, limit = 50): Observable<ChatMessage[]> {
     const params = new HttpParams().set('before', before).set('limit', String(limit));
     return this.api.get<ConversationDto>(`/messages/conversations/${enc(conversationId)}`, params).pipe(map(c => c.messages.map(toMessage)));

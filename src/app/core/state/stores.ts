@@ -34,10 +34,14 @@ export class NotificationsStore {
       const item: AppNotification = { ...n, type: n.type.toLowerCase() as NotificationType };
       const isNew = !this.items().some(x => x.id === item.id);
       this.items.update(l => [item, ...l.filter(x => x.id !== item.id)]);
-      if (isNew || !item.read) this.toast.info(item.title);
+      if (isNew && !item.read) this.toast.info(item.title);
     });
+    // Reading a conversation also closes its "new message" notification on the server: re-sync the bell.
+    this.rt.chat$.subscribe(e => { if (e.type === 'read' && e.actor && e.actor === this.session.user()?.id) this.refresh(); });
   }
   refresh() { this.repo.list().subscribe({ next: v => this.items.set(v), error: () => undefined }); }
+  remove(id: string) { this.items.update(l => l.filter(n => n.id !== id)); this.repo.remove(id).subscribe({ error: () => this.refresh() }); }
+  clear(scope: 'all' | 'read' = 'all') { this.items.update(l => (scope === 'all' ? [] : l.filter(n => !n.read))); this.repo.clear(scope).subscribe({ error: () => this.refresh() }); }
   markRead(id: string | 'all') { this.items.update(l => l.map(n => (id === 'all' || n.id === id ? { ...n, read: true } : n))); this.repo.markRead(id).subscribe(); }
 }
 

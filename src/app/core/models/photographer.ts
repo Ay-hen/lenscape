@@ -71,6 +71,9 @@ export interface PhotographerProfile {
   onboardingStep: number;
 }
 
+export interface CompletionItem { key: string; label: string; weight: number; done: boolean; link: string }
+export interface ProfileCompletion { percent: number; items: CompletionItem[]; dismissThreshold: number; canDismiss: boolean; dismissed: boolean; snoozedUntil?: string; showReminder: boolean }
+
 export interface PhotographerSummary {
   id: string;
   displayName: string;

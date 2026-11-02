@@ -5,7 +5,15 @@ import { APP_ENV } from '../config/app-config';
 import { GeoPoint } from '../models';
 import { CITY_COORDS } from './gazetteer';
 
-export interface GeoResult { label: string; point: GeoPoint; city?: string }
+/** `address` is a short street address (max 160 chars, the server limit) when the provider could resolve one. */
+export interface GeoResult { label: string; point: GeoPoint; city?: string; address?: string }
+
+function toAddress(a: any, display?: string): string | undefined {
+  const street = a ? [a.house_number, a.road ?? a.pedestrian ?? a.footway].filter(Boolean).join(' ') : '';
+  const parts = a ? [street, a.neighbourhood ?? a.suburb ?? a.quarter, a.city ?? a.town ?? a.village].filter(Boolean) : [];
+  const text = parts.length ? parts.join(', ') : display?.split(',').slice(0, 3).join(',').trim();
+  return text ? text.slice(0, 160) : undefined;
+}
 
 /**
  * Place search + reverse geocoding.
@@ -23,7 +31,7 @@ export class GeocodingService {
     const local = this.local(query);
     if (this.env.provider === 'local') return of(local);
     return this.http.get<any[]>(`${this.env.baseUrl}/search`, { params: { q: query, format: 'jsonv2', limit: 6, addressdetails: 1, countrycodes: this.env.countryCodes } }).pipe(
-      map(rows => rows.map(r => ({ label: r.display_name as string, point: { lat: +r.lat, lng: +r.lon }, city: r.address?.city ?? r.address?.town ?? r.address?.village }))),
+      map(rows => rows.map(r => ({ label: r.display_name as string, point: { lat: +r.lat, lng: +r.lon }, city: r.address?.city ?? r.address?.town ?? r.address?.village, address: toAddress(r.address, r.display_name) }))),
       map(remote => (remote.length ? remote : local)),
       catchError(() => of(local)), // offline / blocked → fall back gracefully
     );
@@ -32,8 +40,8 @@ export class GeocodingService {
   reverse(p: GeoPoint): Observable<GeoResult | null> {
     const near = this.nearestCity(p);
     if (this.env.provider === 'local') return of(near);
-    return this.http.get<any>(`${this.env.baseUrl}/reverse`, { params: { lat: p.lat, lon: p.lng, format: 'jsonv2', zoom: 14 } }).pipe(
-      map(r => (r?.display_name ? { label: r.display_name as string, point: p, city: r.address?.city ?? r.address?.town ?? r.address?.village } : near)),
+    return this.http.get<any>(`${this.env.baseUrl}/reverse`, { params: { lat: p.lat, lon: p.lng, format: 'jsonv2', zoom: 14, addressdetails: 1 } }).pipe(
+      map(r => (r?.display_name ? { label: r.display_name as string, point: p, city: r.address?.city ?? r.address?.town ?? r.address?.village, address: toAddress(r.address, r.display_name) } : near)),
       catchError(() => of(near)),
     );
   }
