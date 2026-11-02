@@ -11,16 +11,18 @@ import { PhotographerCardComponent } from '../../shared/cards/photographer-card.
 import { BadgeComponent } from '../../shared/ui/badges';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, StatCardComponent } from '../../shared/ui/misc';
+import { DashboardSkeletonComponent } from '../../shared/ui/dashboard-skeleton.component';
+
 import { SeoService } from '../../core/seo.service';
 
 @Component({
   selector: 'app-account-overview',
-  imports: [RouterLink, PhotographerCardComponent, BadgeComponent, IconComponent, EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, StatCardComponent],
+  imports: [RouterLink, DashboardSkeletonComponent, PhotographerCardComponent, BadgeComponent, IconComponent, EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <app-page-header [title]="'Hello, ' + firstName() + ' 👋'" subtitle="Here's what's happening with your bookings."><a class="btn btn--primary" routerLink="/discover"><app-icon name="search" [size]="16" />Find a photographer</a></app-page-header>
   @if (data.error()) { <app-error-state [error]="data.error()" (retry)="data.reload()" /> }
-  @else if (data.isLoading() && !data.value()) { <div class="grid grid--4">@for (s of [1,2,3,4]; track s) { <div class="skeleton" style="height: 110px"></div> }</div> }
+  @else if (data.isLoading() && !data.value()) { <app-dashboard-skeleton [stats]="4" [charts]="false" [listCount]="2" /> }
   @else if (data.value(); as d) {
     <div class="grid grid--4"><app-stat-card label="Upcoming sessions" [value]="upcoming().length" icon="calendar-check" hint="Confirmed & in the future" /><app-stat-card label="Awaiting confirmation" [value]="pending().length" icon="hourglass" hint="Photographer hasn't replied yet" />
       <app-stat-card label="Completed" [value]="completed().length" icon="check-circle" /><app-stat-card label="Saved photographers" [value]="fav.count()" icon="heart" /></div>

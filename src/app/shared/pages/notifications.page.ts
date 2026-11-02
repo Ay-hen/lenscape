@@ -6,6 +6,7 @@ import { timeAgo } from '../../core/util/dates';
 import { IconComponent } from '../ui/icon.component';
 import { PageHeaderComponent } from '../ui/misc';
 import { SeoService } from '../../core/seo.service';
+import { ConfirmService } from '../services/overlay.services';
 import { NOTE_META, groupByDay, metaOf } from '../notifications/notification-meta';
 
 type Filter = 'all' | 'unread' | 'booking' | 'message' | 'review' | 'system';
@@ -17,6 +18,7 @@ type Filter = 'all' | 'unread' | 'booking' | 'message' | 'review' | 'system';
   template: `
   <app-page-header title="Notifications" subtitle="Everything that happens with your bookings, messages and reviews.">
     <button class="btn btn--outline" type="button" [disabled]="!store.unread()" (click)="store.markRead('all')"><app-icon name="check-check" [size]="16" />Mark all as read</button>
+    <button class="btn btn--outline" type="button" [disabled]="!store.items().length" (click)="clearAll()"><app-icon name="trash" [size]="16" />Clear all</button>
   </app-page-header>
 
   <div class="inbox">
@@ -43,7 +45,8 @@ type Filter = 'all' | 'unread' | 'booking' | 'message' | 'review' | 'system';
                   <span class="body">{{ n.body }}</span></span>
                 @if (!n.read) { <i class="dot" aria-label="Unread"></i> }
               </a>
-              @if (!n.read) { <button type="button" class="mk" title="Mark as read" aria-label="Mark as read" (click)="store.markRead(n.id)"><app-icon name="check" [size]="15" /></button> }
+              <div class="acts">@if (!n.read) { <button type="button" class="mk" title="Mark as read" aria-label="Mark as read" (click)="store.markRead(n.id)"><app-icon name="check" [size]="15" /></button> }
+                <button type="button" class="rm" title="Delete" aria-label="Delete notification" (click)="store.remove(n.id)"><app-icon name="trash" [size]="15" /></button></div>
             </li> }</ul></section>
       }
     }
@@ -68,8 +71,9 @@ type Filter = 'all' | 'unread' | 'booking' | 'message' | 'review' | 'system';
   .top strong { font-size: 15px; } .item:not(.un) .top strong { font-weight: 600; color: var(--c-text-muted); } .when { font-size: 12px; color: var(--c-text-subtle); white-space: nowrap; }
   .body { color: var(--c-text-muted); font-size: 14px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .dot { position: absolute; top: 18px; right: 18px; width: 9px; height: 9px; border-radius: 50%; background: var(--c-primary-600); box-shadow: 0 0 0 4px var(--c-primary-100); }
-  .mk { position: absolute; right: 10px; bottom: 10px; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text-muted); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .15s, background .15s; }
-  .item:hover .mk, .mk:focus-visible { opacity: 1; } .mk:hover { background: var(--c-success-bg); color: var(--c-success); } @media (hover: none) { .mk { opacity: 1; } }
+  .acts { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; }
+  .mk, .rm { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text-muted); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .15s, background .15s; }
+  .item:hover .mk, .item:hover .rm, .mk:focus-visible, .rm:focus-visible { opacity: 1; } .mk:hover { background: var(--c-success-bg); color: var(--c-success); } .rm:hover { color: var(--c-error); } @media (hover: none) { .mk, .rm { opacity: 1; } }
   .empty { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 64px 16px; background: var(--c-surface); border: 1px dashed var(--c-border-strong); border-radius: 22px; }
   .ring { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: var(--c-primary-50); color: var(--c-primary-600); margin-bottom: 8px; }
   @keyframes in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -77,7 +81,7 @@ type Filter = 'all' | 'unread' | 'booking' | 'message' | 'review' | 'system';
   @media (max-width: 520px) { .item a { padding-right: 40px; } .top { flex-direction: column; gap: 0; } }`,
 })
 export class NotificationsPage {
-  readonly store = inject(NotificationsStore); private router = inject(Router);
+  readonly store = inject(NotificationsStore); private router = inject(Router); private confirm = inject(ConfirmService);
   readonly meta = metaOf; readonly ago = (i: string) => timeAgo(i);
   readonly filter = signal<Filter>('all');
   readonly filters: { key: Filter; label: string; icon?: string }[] = [{ key: 'all', label: 'All' }, { key: 'unread', label: 'Unread' },
@@ -85,5 +89,6 @@ export class NotificationsPage {
   readonly shown = computed(() => { const f = this.filter(); const l = this.store.items(); return f === 'all' ? l : f === 'unread' ? l.filter(n => !n.read) : l.filter(n => n.type === f); });
   readonly groups = computed(() => groupByDay(this.shown()));
   constructor() { inject(SeoService).set('Notifications'); this.store.refresh(); }
+  async clearAll() { const r = await this.confirm.ask({ title: 'Clear all notifications?', message: 'This removes every notification from your list.', confirmText: 'Clear all', danger: true }); if (r.ok) this.store.clear('all'); }
   open(n: AppNotification, ev: Event) { this.store.markRead(n.id); if (!n.link) ev.preventDefault(); }
 }

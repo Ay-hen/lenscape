@@ -10,6 +10,7 @@ import { GearItem, GeoPoint, PhotographerProfile, WorkMode } from '../../core/mo
 import { GeoResult, GeocodingService } from '../../core/geo/geocoding.service';
 import { CITIES, CITY_COORDS } from '../../core/geo/gazetteer';
 import { cleanGear } from '../../core/util/gear';
+import { MIN_PORTFOLIO_PHOTOS } from '../../core/util/profile-rules';
 import { errorText, touchAll } from '../../core/util/forms';
 import { SeoService } from '../../core/seo.service';
 import { FieldComponent } from '../../shared/ui/field.component';
@@ -65,7 +66,7 @@ const STEPS = ['Basics', 'Location', 'Specialties & gear', 'Policies', 'Review']
             <div class="notice notice--info"><app-icon name="shield" [size]="18" /><div>Customers see your <strong>city</strong> and an approximate spot inside it on the map. Your exact address is never published and is not collected.</div></div>
           } @else {
             <div class="notice notice--info"><app-icon name="map-pin" [size]="18" /><div>Your shop's <strong>exact position is public</strong> on the map so customers can find you. Search for it, drag the pin onto the entrance, or type its coordinates.</div></div>
-            <app-field label="Shop address" hint="Optional. Street address shown on your profile."><input class="input" maxlength="160" [value]="shopAddress()" (input)="shopAddress.set($any($event.target).value)" /></app-field>
+            <app-field label="Shop address" hint="Optional. Filled in automatically from “My location” or a picked place; you can edit it."><input class="input" maxlength="160" [value]="shopAddress()" (input)="shopAddress.set($any($event.target).value)" /></app-field>
             <app-location-search label="Find your shop" placeholder="Search an address, street or neighbourhood" [locate]="true" (picked)="picked($event)" />
             <app-location-picker [point]="point()" [radiusKm]="form.controls.serviceRadiusKm.value || null" [height]="360" (pointChange)="movePin($event)" />
             <div class="form-grid">
@@ -162,7 +163,7 @@ export class StudioProfilePage {
     if (raw.trim() === '' || !Number.isFinite(v) || Math.abs(v) > max) { this.error.set(`${axis === 'lat' ? 'Latitude' : 'Longitude'} must be a number between -${max} and ${max}.`); this.point.update(p => ({ ...p })); return; }
     this.error.set(''); this.movePin({ ...this.point(), [axis]: +v.toFixed(6) });
   }
-  picked(r: GeoResult) { this.movePin(r.point); if (r.city && this.cities.includes(r.city)) this.form.controls.city.setValue(r.city); }
+  picked(r: GeoResult) { this.movePin(r.point); if (r.address) this.shopAddress.set(r.address); if (r.city && this.cities.includes(r.city)) this.form.controls.city.setValue(r.city); }
   private list(s: string) { return s.split(/[,\n]/).map(x => x.trim()).filter(Boolean); }
   readonly checklist = computed(() => {
     const p = this.res.value()?.profile; if (!p) return [];
@@ -171,7 +172,7 @@ export class StudioProfilePage {
       { label: 'Name, headline and a bio of 100+ characters', ok: !!v.displayName && !!v.headline && v.bio.length >= 100, link: '' },
       { label: this.mode() === 'shop' ? 'Shop placed exactly on the map' : 'City and travel distance set', ok: !!v.city && (this.mode() === 'freelancer' || this.pinSet()) && p.onboardingStep >= 2, link: '' },
       { label: 'At least one specialty', ok: this.spec().length > 0, link: '' },
-      { label: 'At least 6 portfolio photos', ok: p.portfolio.length >= 6, link: '/studio/portfolio' },
+      { label: `At least ${MIN_PORTFOLIO_PHOTOS} portfolio photos`, ok: p.portfolio.filter(i => i.visible).length >= MIN_PORTFOLIO_PHOTOS, link: '/studio/portfolio' },
       { label: 'A service with at least one package (optional — you can add it later)', ok: v2.hasPackage, link: '/studio/services' },
     ];
   });

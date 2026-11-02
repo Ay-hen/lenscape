@@ -9,7 +9,7 @@ import { errorText } from '../../core/util/forms';
 import { avatarImage } from '../../core/util/images';
 import { EmptyStateComponent, ErrorStateComponent, PageHeaderComponent } from '../ui/misc';
 import { IconComponent } from '../ui/icon.component';
-import { ToastService } from '../services/overlay.services';
+import { ConfirmService, ToastService } from '../services/overlay.services';
 import { SeoService } from '../../core/seo.service';
 import { ConversationListComponent } from './chat/conversation-list.component';
 import { ChatThreadComponent } from './chat/chat-thread.component';
@@ -34,7 +34,7 @@ const PAGE = 50;
   @else if (!convs().length) { <div class="card"><app-empty-state icon="message" title="No conversations yet" [text]="isClient() ? 'Open a photographer’s profile and press “Message” to start a conversation.' : 'Customers can message you from your profile or a booking.'" [actionLabel]="isClient() ? 'Find photographers' : ''" actionLink="/discover" /></div> }
   @else {
   <div class="chat card" [class.has]="!!current()">
-    <app-conversation-list [conversations]="convs()" [activeId]="activeId()" [meId]="me()?.id" [isClient]="isClient()" [typing]="typingIn()" (select)="select($event)" />
+    <app-conversation-list [conversations]="convs()" [activeId]="activeId()" [meId]="me()?.id" [isClient]="isClient()" [typing]="typingIn()" (select)="select($event)" (remove)="remove($event)" />
     <section class="pane">
       @if (current(); as c) {
         <app-chat-thread
@@ -68,7 +68,7 @@ const PAGE = 50;
   `,
 })
 export class MessagesPage {
-  private repo = inject(MessagingRepository); private session = inject(SessionStore); private toast = inject(ToastService);
+  private repo = inject(MessagingRepository); private session = inject(SessionStore); private toast = inject(ToastService); private confirm = inject(ConfirmService);
   readonly rt = inject(RealtimeService);
   readonly me = this.session.user; readonly isClient = computed(() => this.session.role() === 'client');
   readonly list = rxResource({ params: () => 1, stream: () => this.repo.conversations() });
@@ -85,6 +85,8 @@ export class MessagesPage {
   readonly current = computed(() => this.convs().find(c => c.id === this.activeId()) ?? null);
   private typingTimers = new Map<string, ReturnType<typeof setTimeout>>(); private lastTypingSent = 0; private stopTimer: ReturnType<typeof setTimeout> | null = null;
   private ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Conversation the server currently believes is open on my screen. */
+  private focusedId: string | null = null;
 
   constructor() {
     inject(SeoService).set('Messages');
@@ -93,7 +95,10 @@ export class MessagesPage {
     const sub = this.rt.chat$.subscribe(e => this.onEvent(e)); const sub2 = this.rt.reconnected$.subscribe(() => this.list.reload());
     // When the socket is down fall back to light polling so the chat still moves along.
     const poll = setInterval(() => { if (!this.rt.connected() && document.visibilityState === 'visible') this.list.reload(); }, 6000);
-    inject(DestroyRef).onDestroy(() => { sub.unsubscribe(); sub2.unsubscribe(); clearInterval(poll); this.typingTimers.forEach(clearTimeout); this.ackTimers.forEach(clearTimeout); this.stopTyping(); });
+    // Back in the tab: tell the server this chat is on screen again and clear what arrived meanwhile.
+    const onVisible = () => { this.syncFocus(); const c = this.current(); if (c && document.visibilityState === 'visible' && this.unread(c)) this.markReadNow(c); };
+    document.addEventListener('visibilitychange', onVisible);
+    inject(DestroyRef).onDestroy(() => { document.removeEventListener('visibilitychange', onVisible); if (this.focusedId) this.rt.focus(this.focusedId, false); sub.unsubscribe(); sub2.unsubscribe(); clearInterval(poll); this.typingTimers.forEach(clearTimeout); this.ackTimers.forEach(clearTimeout); this.stopTyping(); });
   }
 
   other(c: Conversation) { return this.isClient() ? c.photographerName : c.customerName; }
@@ -114,9 +119,29 @@ export class MessagesPage {
   select(c: Conversation) {
     if (c.id !== this.activeId()) this.stopTyping(); // leaving a conversation must switch our "typing…" off for the other person
     this.activeId.set(c.id);
-    if (this.unread(c)) { this.patch(c.id, x => ({ ...x, unreadFor: { ...x.unreadFor, [this.me()?.id ?? '']: 0 } })); this.repo.markRead(c.id).subscribe({ error: () => undefined }); }
+    if (this.unread(c)) this.markReadNow(c);
+    this.syncFocus();
   }
-  back() { this.stopTyping(); this.activeId.set(null); }
+  back() { this.stopTyping(); this.activeId.set(null); this.syncFocus(); }
+
+  private markReadNow(c: Conversation) {
+    this.patch(c.id, x => ({ ...x, unreadFor: { ...x.unreadFor, [this.me()?.id ?? '']: 0 } }));
+    this.repo.markRead(c.id).subscribe({ error: () => undefined });
+  }
+  /** Tells the server which chat is really on screen (open AND tab visible): messages arriving there are read at once and raise no notification. */
+  private syncFocus() {
+    const id = this.activeId(); const want = id && document.visibilityState === 'visible' ? id : null;
+    if (want === this.focusedId) return;
+    if (this.focusedId) this.rt.focus(this.focusedId, false);
+    if (want) this.rt.focus(want, true);
+    this.focusedId = want;
+  }
+  private dropLocal(id: string) { this.convs.update(l => l.filter(c => c.id !== id)); if (this.activeId() === id) { this.activeId.set(null); this.syncFocus(); } }
+  async remove(c: Conversation) {
+    const r = await this.confirm.ask({ title: 'Delete this conversation?', message: `It is removed from your list only. ${this.other(c)} keeps their copy, and a new message from them brings the chat back.`, confirmText: 'Delete', danger: true });
+    if (!r.ok) return;
+    this.repo.deleteConversation(c.id).subscribe({ next: () => this.dropLocal(c.id), error: e => this.toast.error(errorText(e)) });
+  }
 
   /** Loads the page of history before the oldest message on screen and puts it above, without moving what the reader is looking at. */
   loadOlder(c: Conversation) {
@@ -133,6 +158,7 @@ export class MessagesPage {
   }
 
   private onEvent(e: ChatEventDto) {
+    if (e.type === 'deleted') { this.dropLocal(e.conversationId); return; }
     const known = this.convs().some(c => c.id === e.conversationId);
     if (e.type === 'typing' || e.type === 'typing_stopped') { this.setTyping(e.conversationId, e.type === 'typing'); return; }
     if (!known) { this.list.reload(); return; }
@@ -147,7 +173,7 @@ export class MessagesPage {
     });
     if (msg.senderId !== this.me()?.id) {
       this.setTyping(e.conversationId, false);
-      if (this.activeId() === e.conversationId && document.visibilityState === 'visible') { this.patch(e.conversationId, c => ({ ...c, unreadFor: { ...c.unreadFor, [this.me()?.id ?? '']: 0 } })); this.repo.markRead(e.conversationId).subscribe({ error: () => undefined }); }
+      if (this.activeId() === e.conversationId && document.visibilityState === 'visible' && (e.unreadFor?.[this.me()?.id ?? ''] ?? 1) > 0) { const c = this.convs().find(x => x.id === e.conversationId); if (c) this.markReadNow(c); }
     }
   }
 

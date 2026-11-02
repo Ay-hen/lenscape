@@ -7,15 +7,17 @@ import { timeAgo } from '../../core/util/dates';
 import { SeoService } from '../../core/seo.service';
 import { BarChartComponent, HBarListComponent, LineChartComponent } from '../../shared/charts/charts';
 import { ErrorStateComponent, PageHeaderComponent, StatCardComponent } from '../../shared/ui/misc';
+import { DashboardSkeletonComponent } from '../../shared/ui/dashboard-skeleton.component';
+
 
 @Component({
   selector: 'app-admin-overview',
-  imports: [RouterLink, BarChartComponent, HBarListComponent, LineChartComponent, ErrorStateComponent, PageHeaderComponent, StatCardComponent],
+  imports: [RouterLink, DashboardSkeletonComponent, BarChartComponent, HBarListComponent, LineChartComponent, ErrorStateComponent, PageHeaderComponent, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <app-page-header title="Platform overview" subtitle="Health of the marketplace at a glance." />
   @if (res.error()) { <app-error-state [error]="res.error()" (retry)="res.reload()" /> }
-  @else if (!res.value()) { <div class="grid grid--4">@for (s of [1,2,3,4,5,6,7,8]; track s) { <div class="skeleton" style="height: 108px"></div> }</div> }
+  @else if (!res.value()) { <app-dashboard-skeleton [listCount]="0" /> }
   @else { @let o = res.value()!;
     @if (o.pendingApprovals || o.openDisputes || o.openReports) {
       <div class="todo"><strong>Needs attention</strong>

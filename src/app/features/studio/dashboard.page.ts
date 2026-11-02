@@ -1,13 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import { AnalyticsRepository, BookingRepository, CatalogRepository, PhotographerWorkspaceRepository } from '../../core/api/repositories';
 import { Booking, DateRange } from '../../core/models';
 import { addDays, formatDate, timeAgo, todayISO } from '../../core/util/dates';
 import { errorText } from '../../core/util/forms';
 import { formatMoney } from '../../core/util/price';
 import { LineChartComponent, BarChartComponent } from '../../shared/charts/charts';
+import { DashboardSkeletonComponent } from '../../shared/ui/dashboard-skeleton.component';
+import { CompletionBannerComponent } from './completion-banner.component';
 import { BookingDetailComponent } from '../../shared/bookings/booking-detail.component';
 import { BadgeComponent } from '../../shared/ui/badges';
 import { IconComponent } from '../../shared/ui/icon.component';
@@ -20,7 +22,7 @@ const RANGES = [{ id: '30', label: '30 days', days: 30 }, { id: '90', label: '90
 
 @Component({
   selector: 'app-studio-dashboard',
-  imports: [RouterLink, LineChartComponent, BarChartComponent, BookingDetailComponent, BadgeComponent, IconComponent, ModalComponent, EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, RatingComponent, StatCardComponent],
+  imports: [RouterLink, DashboardSkeletonComponent, CompletionBannerComponent, LineChartComponent, BarChartComponent, BookingDetailComponent, BadgeComponent, IconComponent, ModalComponent, EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, RatingComponent, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <app-page-header [title]="'Welcome back, ' + first() + ''" subtitle="Your studio at a glance — bookings, revenue and profile health.">
@@ -29,8 +31,9 @@ const RANGES = [{ id: '30', label: '30 days', days: 30 }, { id: '90', label: '90
   </app-page-header>
 
   @if (res.error()) { <app-error-state [error]="res.error()" (retry)="res.reload()" /> }
-  @else if (res.isLoading() && !res.value()) { <div class="grid grid--4">@for (s of [1,2,3,4,5,6,7,8]; track s) { <div class="skeleton" style="height: 108px"></div> }</div> }
+  @else if (res.isLoading() && !res.value()) { <app-dashboard-skeleton /> }
   @else if (res.value(); as d) {
+    @if (d.completion) { <app-completion-banner [data]="d.completion" (changed)="res.reload()" /> }
     <div class="grid grid--4 stats">
       <app-stat-card label="Today's sessions" [value]="today().length" icon="calendar" [hint]="today().length ? 'Next at ' + today()[0].startTime : 'Nothing scheduled'" />
       <app-stat-card label="Upcoming (7 days)" [value]="next7().length" icon="calendar-check" hint="Confirmed sessions" />
@@ -84,6 +87,7 @@ export class StudioDashboardPage {
       bookings: this.bookings.list({ page: 1, pageSize: 500 }),
       services: this.catalog.services(profile.id, { includeUnpublished: true }),
       packages: this.catalog.packages(profile.id, { includeUnpublished: true }),
+      completion: this.ws.completion().pipe(catchError(() => of(null))),
     }))),
   });
   readonly first = computed(() => this.res.value()?.profile.displayName.split(' ')[0] ?? '');
@@ -96,13 +100,10 @@ export class StudioDashboardPage {
   private inRange = computed(() => this.all().filter(b => (b.status === 'confirmed' || b.status === 'completed') && b.date >= this.dateRange().from && b.date <= todayISO()));
   readonly rangeValue = computed(() => this.inRange().reduce((s, b) => s + b.pricing.total, 0));
   readonly rangeEarnings = computed(() => this.inRange().reduce((s, b) => s + b.pricing.total - b.pricing.platformFee, 0));
+  /** Weighted completion computed by the server (same number as the reminder banner and the notifications). */
   readonly completion = computed(() => {
-    const v = this.res.value(); if (!v) return { pct: 0, items: [] as { label: string; ok: boolean; link: string }[] };
-    const p = v.profile; const items = [
-      { label: 'Write a bio (100+ characters)', ok: p.bio.length >= 100, link: '/studio/profile' }, { label: 'Set your map location', ok: p.onboardingStep >= 3, link: '/studio/profile' },
-      { label: 'Choose your specialties', ok: p.specialties.length > 0, link: '/studio/profile' }, { label: 'Add 6+ portfolio photos', ok: p.portfolio.length >= 6, link: '/studio/portfolio' },
-      { label: 'Add a service', ok: v.services.some(s => s.status === 'published'), link: '/studio/services' }, { label: 'Add a package', ok: v.packages.some(k => k.status === 'published'), link: '/studio/packages' }];
-    return { pct: Math.round((items.filter(i => i.ok).length / items.length) * 100), items };
+    const c = this.res.value()?.completion;
+    return c ? { pct: c.percent, items: c.items.map(i => ({ label: i.label, ok: i.done, link: i.link })) } : { pct: 0, items: [] as { label: string; ok: boolean; link: string }[] };
   });
   readonly money = (n: number) => formatMoney(n, 'MAD'); readonly fmt = (d: string) => formatDate(d, { weekday: 'short', day: 'numeric', month: 'short' }); readonly ago = timeAgo;
   async quick(b: Booking, status: 'confirmed' | 'rejected') {

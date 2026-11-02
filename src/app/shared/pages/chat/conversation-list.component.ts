@@ -2,15 +2,17 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { Conversation } from '../../../core/models';
 import { listStamp } from '../../../core/util/chat';
 import { avatarImage } from '../../../core/util/images';
+import { IconComponent } from '../../ui/icon.component';
 
 /** Left column of the messaging screen: one row per conversation with avatar, last-message preview, time and unread badge. Presentational only. */
 @Component({
   selector: 'app-conversation-list',
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <ul aria-label="Conversations">
     @for (c of conversations(); track c.id) {
-      <li>
+      <li class="item">
         <button type="button" class="row" [class.on]="c.id === activeId()" [attr.aria-current]="c.id === activeId() ? 'true' : null" (click)="select.emit(c)">
           <img class="av" [src]="avatar(c)" alt="" width="48" height="48" />
           <span class="mid">
@@ -26,11 +28,16 @@ import { avatarImage } from '../../../core/util/images';
             </span>
           </span>
         </button>
+        <button type="button" class="del" title="Delete conversation" [attr.aria-label]="'Delete conversation with ' + other(c)" (click)="remove.emit(c)"><app-icon name="trash" [size]="15" /></button>
       </li>
     }
   </ul>`,
   styles: `
     :host { display: block; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-right: 1px solid var(--c-border); }
+    .item { position: relative; }
+    .del { position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text-muted); display: none; place-items: center; cursor: pointer; }
+    .item:hover .del, .del:focus-visible { display: grid; } .item:hover .when { visibility: hidden; }
+    @media (hover: none) { .del { display: grid; top: 50%; right: 8px; transform: translateY(-50%); } .row { padding-right: 44px; } }
     ul { margin: 0; padding: 0; list-style: none; }
     .row { display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--c-border); background: none; text-align: left; cursor: pointer; color: inherit; transition: background .15s; }
     .row:hover { background: var(--c-surface-2); }
@@ -57,6 +64,7 @@ export class ConversationListComponent {
   /** Conversation ids in which the other person is typing right now. */
   readonly typing = input<Record<string, true>>({});
   readonly select = output<Conversation>();
+  readonly remove = output<Conversation>();
 
   other(c: Conversation) { return this.isClient() ? c.photographerName : c.customerName; }
   avatar(c: Conversation) { return avatarImage(this.other(c)); }

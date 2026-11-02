@@ -1,3 +1,4 @@
+import { MIN_PORTFOLIO_PHOTOS } from '../../core/util/profile-rules';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +27,7 @@ const MAX_MB = 8; const TYPES = /^image\/(jpeg|png|webp)$/;
     <section class="card card--pad stack" aria-label="Albums"><div class="row"><strong>Albums</strong><span class="grow"></span>
       <input class="input" style="max-width: 220px" [(ngModel)]="newAlbum" (keydown.enter)="addAlbum()" placeholder="New album name" aria-label="New album name" maxlength="40" /><button type="button" class="btn btn--sm btn--outline" (click)="addAlbum()">Add album</button></div>
       <div class="chips">@for (a of albums(); track a.id) { <span class="chip alb"><input [ngModel]="a.name" (ngModelChange)="renameAlbum(a.id, $event)" [attr.aria-label]="'Album name ' + a.name" /><button type="button" (click)="removeAlbum(a)" [attr.aria-label]="'Delete album ' + a.name"><app-icon name="x" [size]="13" /></button></span> } @empty { <span class="muted small">No albums yet — photos are shown in one gallery.</span> }</div></section>
-    @if (!images().length) { <app-empty-state icon="image" title="No photos yet" text="Upload at least 6 photos to complete your profile. Use images you own the rights to." /> }
+    @if (!images().length) { <app-empty-state icon="image" title="No photos yet" [text]="'Upload at least ' + min + ' photos to complete your profile. Use images you own the rights to.'" /> }
     @else {
       <p class="muted small">{{ visibleCount() }} visible of {{ images().length }}. Images are uploaded to the server when you add them; save to publish your changes.</p>
       <ul class="grid grid--3 gal">@for (im of images(); track im.id; let i = $index) {
@@ -43,6 +44,7 @@ const MAX_MB = 8; const TYPES = /^image\/(jpeg|png|webp)$/;
   .gal { margin-top: 16px; } .ph { overflow: hidden; } .ph.off { opacity: .6; } .pic { position: relative; aspect-ratio: 4/3; background: var(--c-surface-2); } .pic img { width: 100%; height: 100%; object-fit: cover; display: block; } .cov { position: absolute; top: 8px; left: 8px; background: var(--c-ink-bg); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 99px; font-weight: 600; } .f { padding: 12px; display: flex; flex-direction: column; gap: 8px; } .tools { gap: 2px; flex-wrap: wrap; } .row .select { flex: 1; min-width: 0; }`,
 })
 export class StudioPortfolioPage {
+  readonly min = MIN_PORTFOLIO_PHOTOS;
   private ws = inject(PhotographerWorkspaceRepository); private upl = inject(UploadRepository); private catalog = inject(CatalogRepository); private toast = inject(ToastService); private confirm = inject(ConfirmService);
   readonly res = rxResource({ stream: () => this.ws.myProfile() }); private catRes = rxResource({ stream: () => this.catalog.categories() }); readonly cats = computed(() => this.catRes.value() ?? []);
   readonly images = signal<PortfolioImage[]>([]); readonly albums = signal<Album[]>([]); readonly dirty = signal(false); readonly busy = signal(false); readonly uploading = signal(false); readonly error = signal(''); newAlbum = '';
