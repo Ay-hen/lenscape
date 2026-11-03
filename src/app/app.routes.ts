@@ -8,6 +8,7 @@ import { guestGuard, roleGuard } from './core/auth/guards';
 export const routes: Routes = [
   {
     path: '',
+    
     loadComponent: () => import('./layouts/public-shell.component').then(m => m.PublicShellComponent),
     children: [
       { path: '', pathMatch: 'full', title: 'Lenscape', loadComponent: () => import('./features/home/home.page').then(m => m.HomePage) },
@@ -20,6 +21,8 @@ export const routes: Routes = [
       { path: 'register/photographer', canActivate: [guestGuard], loadComponent: () => import('./features/auth/register.page').then(m => m.RegisterPage), data: { mode: 'photographer' } },
     ],
   },
+  { path: 'forgot-password', canActivate: [guestGuard], loadComponent: () => import('./features/auth/forgot-password.page').then(m => m.ForgotPasswordPage) },
+      { path: 'reset-password', canActivate: [guestGuard], loadComponent: () => import('./features/auth/reset-password.page').then(m => m.ResetPasswordPage) },
   {
     path: 'account',
     canActivate: [roleGuard('client')], canActivateChild: [roleGuard('client')],
@@ -37,4 +40,5 @@ export const routes: Routes = [
   { path: 'studio', canActivate: [roleGuard('photographer')], data: { area: 'studio' }, loadChildren: () => import('./features/studio/studio.routes').then(m => m.STUDIO_ROUTES) },
   { path: 'admin', canActivate: [roleGuard('admin')], data: { area: 'admin' }, loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES) },
   { path: '**', title: 'Not found', loadComponent: () => import('./features/not-found.page').then(m => m.NotFoundPage) },
+        
 ];

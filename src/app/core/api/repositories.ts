@@ -23,6 +23,8 @@ export abstract class AuthRepository {
   /** @endpoint (legacy) POST /user/auth/logout — revokes the token it is given */ abstract logout(token: string): Observable<void>;
   /** @endpoint NEW GET /user/me */ abstract me(): Observable<User>;
   /** @endpoint NEW POST /auth/password */ abstract changePassword(current: string, next: string): Observable<void>;
+  /** @endpoint NEW POST /auth/password/forgot — e-mails a 6-digit code; always answers the same, whether or not the address has an account */ abstract forgotPassword(email: string): Observable<{ expiresInSeconds: number }>;
+  /** @endpoint NEW POST /auth/password/reset — checks the code, sets the new password and signs the account out everywhere */ abstract resetPassword(email: string, otp: string, password: string): Observable<void>;
 }
 
 export abstract class CustomerRepository {

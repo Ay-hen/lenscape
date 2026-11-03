@@ -25,6 +25,10 @@ export class HttpAuthRepository extends AuthRepository {
   override logout(token: string): Observable<void> { return this.api.http.post<void>(this.api.url('/user/auth/logout'), null, { headers: { Authorization: `Bearer ${token}` } }); }
   override me(): Observable<User> { return this.api.get<User>('/user/me'); }
   override changePassword(current: string, next: string): Observable<void> { return this.api.post<void>('/auth/password', { current, next }); }
+  /** Password recovery step 1: always the same answer, whether or not an account uses the address. */
+  override forgotPassword(email: string): Observable<{ expiresInSeconds: number }> { return this.api.post<{ expiresInSeconds?: number }>('/auth/password/forgot', { email }).pipe(map(r => ({ expiresInSeconds: r?.expiresInSeconds ?? 600 }))); }
+  /** Password recovery step 2: the backend field is `password` (not newPassword). */
+  override resetPassword(email: string, otp: string, password: string): Observable<void> { return this.api.post<unknown>('/auth/password/reset', { email, otp, password }).pipe(map(() => undefined)); }
 }
 
 /** GET/PUT /customers/me */

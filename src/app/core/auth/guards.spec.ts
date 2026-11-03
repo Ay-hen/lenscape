@@ -34,6 +34,9 @@ class FakeAuthRepository extends AuthRepository {
     const u = accounts[sub];
     return u ? of(u) : throwError(() => new ApiError('UNAUTHENTICATED', 'Sign in required.', 401));
   }
+
+  forgotPassword(): Observable<{ expiresInSeconds: number }> { return of({ expiresInSeconds: 600 }); }
+  resetPassword(): Observable<void> { return of(undefined); }
 }
 
 const run = (g: ReturnType<typeof roleGuard>) =>

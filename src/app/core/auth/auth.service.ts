@@ -30,6 +30,10 @@ export class AuthService {
   registerPhotographer(req: RegisterPhotographerRequest): Observable<RegistrationStarted> { return this.repo.registerPhotographer(req); }
   verifyEmail(email: string, otp: string): Observable<Session> { return this.repo.verifyEmail(email, otp).pipe(tap(s => this.accept(s))); }
   resendCode(email: string): Observable<void> { return this.repo.resendCode(email); }
+  /** Password recovery step 1: e-mails a code (same answer for unknown addresses). */
+  forgotPassword(email: string): Observable<{ expiresInSeconds: number }> { return this.repo.forgotPassword(email); }
+  /** Password recovery step 2: the code + new password. Does NOT sign in; the person logs in with the new password. */
+  resetPassword(email: string, otp: string, password: string): Observable<void> { return this.repo.resetPassword(email, otp, password); }
   logout(): void {
     const token = this.store.session()?.token;
     this.verified = null;

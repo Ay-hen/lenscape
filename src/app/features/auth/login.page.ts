@@ -14,23 +14,26 @@ import { SplashService } from '../../core/Splash.service';
   template: `
   <div class="page"><section class="art" aria-hidden="true"><img src="img/login-lens.jpg" alt="" /><div class="shade"></div><blockquote>“The right photographer turns a day into a story.”</blockquote></section>
   <section class="form"><div class="box"><h1>Welcome back</h1><p class="muted">Sign in to manage bookings, favourites and your studio.</p>
+    @if (reset) { <div class="notice notice--success" role="status">Password changed. Sign in with your new password.</div> }
     @if (expired) { <div class="notice notice--warn" role="status">Your session expired. Please sign in again.</div> }
     <form [formGroup]="form" (ngSubmit)="submit()" class="stack" novalidate>
       <app-field label="Username or email" [control]="form.controls.username" [required]="true"><input class="input" formControlName="username" autocomplete="username" [attr.aria-invalid]="form.controls.username.invalid && form.controls.username.touched" /></app-field>
       <app-field label="Password" [control]="form.controls.password" [required]="true"><input class="input" type="password" formControlName="password" autocomplete="current-password" /></app-field>
+      <a class="small forgot" routerLink="/forgot-password">Forgot your password?</a>
       @if (error()) { <div class="notice notice--error" role="alert">{{ error() }}</div> }
       <button class="btn btn--primary btn--lg btn--block" type="submit" [disabled]="loading()">{{ loading() ? 'Signing in…' : 'Sign in' }}</button>
     </form>
     <p class="small muted center">New here? <a routerLink="/register">Create an account</a> · <a routerLink="/register/photographer">Join as a photographer</a></p></div></section></div>`,
   styles: `.page { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: calc(100vh - var(--header-h)); } .art { position: relative; overflow: hidden; } .art img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; } .shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgb(7 14 34 / 78%)); }
   blockquote { position: absolute; left: 40px; right: 40px; bottom: 48px; margin: 0; color: #fff; font-family: var(--font-display); font-size: clamp(1.4rem, 2.4vw, 2rem); line-height: 1.25; }
-  .form { display: grid; place-items: center; padding: 32px 20px; } .box { width: min(100%, 420px); display: flex; flex-direction: column; gap: 18px; } h1 { font-size: 2rem; } .center { text-align: center; }
+  .form { display: grid; place-items: center; padding: 32px 20px; } .box { width: min(100%, 420px); display: flex; flex-direction: column; gap: 18px; } h1 { font-size: 2rem; } .center { text-align: center; } .forgot { align-self: flex-end; margin-top: -8px; }
   @media (max-width: 900px) { .page { grid-template-columns: minmax(0, 1fr); } .art { display: none; } }`,
 })
 export class LoginPage {
   private fb = inject(FormBuilder); private auth = inject(AuthService); private router = inject(Router); private route = inject(ActivatedRoute);
   readonly loading = signal(false); readonly error = signal('');
   readonly expired = !!this.route.snapshot.queryParamMap.get('expired');
+  readonly reset = !!this.route.snapshot.queryParamMap.get('reset');
   readonly form = this.fb.nonNullable.group({ username: ['', Validators.required], password: ['', Validators.required] });
   private splash = inject(SplashService);
   constructor() { inject(SeoService).set('Sign in'); }
