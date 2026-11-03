@@ -6,6 +6,7 @@ import { CatalogRepository, PhotographerWorkspaceRepository } from '../../core/a
 import { Service } from '../../core/models';
 import { CATEGORIES_BY_ID } from '../../core/util/categories';
 import { errorText } from '../../core/util/forms';
+import { sceneImage } from '../../core/util/images';
 import { PRICING_MODEL_LABEL, formatMoney } from '../../core/util/price';
 import { SeoService } from '../../core/seo.service';
 import { BadgeComponent } from '../../shared/ui/badges';
@@ -24,7 +25,7 @@ import { ConfirmService, ToastService } from '../../shared/services/overlay.serv
   @else if (!res.value()!.services.length) { <app-empty-state icon="camera" title="No services yet" text="Create your first service, then add Bronze/Silver/Gold/Platinum packages to it." actionLabel="Create a service" actionLink="/studio/services/new" /> }
   @else {
     <div class="grid grid--2">@for (s of res.value()!.services; track s.id) {
-      <article class="card sv"><img [src]="s.coverImage" alt="" loading="lazy" />
+      <article class="card sv"><img [src]="cover(s)" alt="" loading="lazy" />
         <div class="b"><div class="row between"><h3>{{ s.title }}</h3><app-badge [status]="s.status" /></div>
           @if (s.moderation !== 'ok') { <p class="notice notice--warn small" role="status"><app-icon name="shield-alert" [size]="16" />{{ s.moderation === 'hidden' ? 'Hidden by moderators' : 'Under review after a report' }}</p> }
           <p class="muted small">{{ cat(s.categoryId) }} · {{ model(s) }} · {{ price(s) }} · {{ s.durationMinutes / 60 }} h</p>
@@ -42,6 +43,7 @@ export class StudioServicesPage {
     stream: () => this.ws.myProfile().pipe(switchMap(p => forkJoin({ services: this.catalog.services(p.id, { includeUnpublished: true }), pk: this.catalog.packages(p.id, { includeUnpublished: true }) }).pipe(map(({ services, pk }) => ({ services, counts: pk.reduce<Record<string, number>>((m, k) => ({ ...m, [k.serviceId]: (m[k.serviceId] ?? 0) + 1 }), {}) }))))),
   });
   constructor() { inject(SeoService).set('Services'); }
+  readonly cover = (s: Service) => s.coverImage || sceneImage(s.id, 400, 400);
   readonly cat = (id: string) => CATEGORIES_BY_ID[id] ?? id; readonly model = (s: Service) => PRICING_MODEL_LABEL[s.pricingModel];
   readonly price = (s: Service) => (s.pricingModel === 'quote' || s.basePrice == null ? 'Custom quote' : formatMoney(s.basePrice, s.currency) + (s.pricingModel === 'hourly' ? '/h' : ''));
   setStatus(s: Service, status: Service['status']) { this.ws.setServiceStatus(s.id, status).subscribe({ next: () => { this.toast.success(status === 'published' ? 'Service is visible again.' : 'Service hidden.'); this.res.reload(); }, error: e => this.toast.error(errorText(e)) }); }

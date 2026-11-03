@@ -169,6 +169,34 @@
   --shadow-focus: 0 0 0 3px rgb(96 165 250 / 40%);
 }
 
+// ──────────────────────────────────────────────────────────────
+// Photographer studio theme. Only the neutral surface tokens are re-pointed, and only inside the studio shell
+// (`.app.studio-theme`, see layouts/dashboard-shell.component.ts), so the rest of the app keeps the brand-blue palette.
+//   light mode → near-white / light grey page with white cards
+//   dark mode  → true neutral dark (no blue tint)
+// ──────────────────────────────────────────────────────────────
+.studio-theme {
+  --c-bg: #f4f4f5;
+  --c-bg-glass: rgb(244 244 245 / 88%);
+  --c-surface: #ffffff;
+  --c-surface-2: #f0f0f2;
+  --c-surface-3: #e4e4e7;
+  --c-border: #e4e4e7;
+  --c-border-strong: #d1d1d6;
+}
+
+:root[data-theme='dark'] .studio-theme {
+  --c-bg: #0b0b0c;
+  --c-bg-glass: rgb(11 11 12 / 86%);
+  --c-surface: #141415;
+  --c-surface-2: #1c1c1e;
+  --c-surface-3: #27272a;
+  --c-border: #2a2a2d;
+  --c-border-strong: #3a3a3f;
+  --c-chrome: #050506;
+  --c-chrome-line: #1f1f22;
+}
+
 // Breakpoints (used via mixins; CSS vars can't be used in media queries)
 $bp-sm: 640px;
 $bp-md: 900px;

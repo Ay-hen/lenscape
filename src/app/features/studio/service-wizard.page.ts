@@ -14,7 +14,6 @@ import { ErrorStateComponent, PageHeaderComponent } from '../../shared/ui/misc';
 import { ToastService } from '../../shared/services/overlay.services';
 
 const STEPS = ['Details', 'Pricing', 'Deliverables & add-ons', 'Review'];
-const COVERS = ['wedding', 'wedding-wide', 'wedding-bouquet', 'party', 'party-group', 'party-sunset', 'party-pool', 'birthday', 'birthday-candles', 'cupcakes', 'editing'].map(n => `img/${n}.jpg`);
 const MODEL_HELP: Record<PricingModel, string> = {
   fixed: 'One price for the whole session. Packages carry the exact price.',
   hourly: 'Customers pick hours; the total is hourly rate × hours (server recalculates).',
@@ -38,9 +37,11 @@ const MODEL_HELP: Record<PricingModel, string> = {
         <app-field label="Title" [control]="form.controls.title" [required]="true"><input class="input" formControlName="title" maxlength="80" placeholder="Wedding day coverage" /></app-field>
         <app-field label="Category" [control]="form.controls.categoryId" [required]="true"><select class="select" formControlName="categoryId">@for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }</select></app-field>
         <app-field label="Description" [control]="form.controls.description" [required]="true" hint="At least 40 characters"><textarea class="textarea" rows="5" formControlName="description"></textarea></app-field>
-        <fieldset><legend class="field__label">Cover image</legend><div class="covers">@for (c of covers; track c) { <button type="button" [attr.aria-pressed]="form.controls.coverImage.value === c" (click)="form.controls.coverImage.setValue(c)"><img [src]="c" alt="" loading="lazy" /></button> }</div>
-          <label class="btn btn--sm btn--outline up"><app-icon name="upload" [size]="15" />{{ uploading() ? 'Uploading…' : 'Upload your own' }}<input type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="upload($event)" /></label>
-          <p class="muted xs">JPEG, PNG or WebP up to 8 MB.</p></fieldset></section> }
+        <fieldset><legend class="field__label">Cover image <span class="muted xs">(optional)</span></legend>
+          @if (form.controls.coverImage.value) { <div class="cover-prev"><img [src]="form.controls.coverImage.value" alt="Cover image preview" /></div> }
+          <div class="row"><label class="btn btn--sm btn--outline up"><app-icon name="upload" [size]="15" />{{ uploading() ? 'Uploading…' : form.controls.coverImage.value ? 'Replace image' : 'Upload an image' }}<input type="file" accept="image/jpeg,image/png,image/webp" hidden [disabled]="uploading()" (change)="upload($event)" /></label>
+            @if (form.controls.coverImage.value) { <button type="button" class="btn btn--sm btn--ghost" (click)="form.controls.coverImage.setValue('')"><app-icon name="trash" [size]="15" />Remove</button> }</div>
+          <p class="muted xs">JPEG, PNG or WebP up to 8 MB. Without a cover, a neutral placeholder is shown.</p></fieldset></section> }
       @case (1) { <section class="card card--pad stack">
         <fieldset class="stack"><legend class="field__label">How do you charge?</legend>
           <div class="models">@for (m of models; track m) { <label class="opt" [class.on]="form.controls.pricingModel.value === m"><input type="radio" formControlName="pricingModel" [value]="m" /><strong>{{ label(m) }}</strong><span class="muted small">{{ help[m] }}</span></label> }</div></fieldset>
@@ -65,7 +66,7 @@ const MODEL_HELP: Record<PricingModel, string> = {
       @else { <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="save('published')">Save service</button> }</div>
   </form>}`,
   styles: `.steps { display: flex; gap: 6px; margin-bottom: 20px; overflow-x: auto; } .steps li { flex: 1; min-width: 120px; } .steps button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--c-border); background: var(--c-surface); cursor: pointer; font-weight: 600; font-size: 13px; color: var(--c-text-muted); } .steps span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--c-surface-2); font-size: 12px; } .on button { border-color: var(--c-primary-600); color: var(--c-ink); } .on span { background: var(--c-primary-600); color: #fff; } .done span { background: var(--c-success-solid); color: #fff; }
-  fieldset { border: 0; padding: 0; margin: 0; } .covers { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 8px 0 12px; } .covers button { padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; cursor: pointer; aspect-ratio: 4/3; background: none; } .covers button[aria-pressed='true'] { border-color: var(--c-primary-600); box-shadow: var(--shadow-1); } .covers img { width: 100%; height: 100%; object-fit: cover; display: block; } .up { cursor: pointer; }
+  fieldset { border: 0; padding: 0; margin: 0; } .cover-prev { width: min(100%, 280px); aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; margin: 8px 0 12px; border: 1px solid var(--c-border); background: var(--c-surface-2); } .cover-prev img { width: 100%; height: 100%; object-fit: cover; display: block; } .up { cursor: pointer; }
   .models { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; } .opt { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--c-border-strong); border-radius: 12px; cursor: pointer; } .opt input { position: absolute; opacity: 0; } .opt.on { border-color: var(--c-primary-600); background: var(--c-primary-50); } .opt:has(:focus-visible) { outline: 2px solid var(--c-primary-600); outline-offset: 2px; }
   .ao { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; align-items: center; } h2 { font-size: 1.25rem; } .rv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; } .rv dt { color: var(--c-text-muted); }`,
 })
@@ -73,14 +74,14 @@ export class ServiceWizardPage {
   private fb = inject(FormBuilder); private ws = inject(PhotographerWorkspaceRepository); private catalog = inject(CatalogRepository); private upl = inject(UploadRepository);
   private toast = inject(ToastService); private router = inject(Router);
   readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id');
-  readonly steps = STEPS; readonly covers = COVERS; readonly help = MODEL_HELP; readonly models: PricingModel[] = ['fixed', 'hourly', 'starting', 'quote'];
+  readonly steps = STEPS; readonly help = MODEL_HELP; readonly models: PricingModel[] = ['fixed', 'hourly', 'starting', 'quote'];
   readonly step = signal(0); readonly busy = signal(false); readonly error = signal(''); readonly uploading = signal(false);
   readonly res = rxResource({
     stream: () => this.ws.myProfile().pipe(switchMap(p => this.catalog.services(p.id, { includeUnpublished: true }))),
   });
   readonly cats = rxResource({ stream: () => this.catalog.categories() }); readonly categories = computed(() => this.cats.value() ?? []);
   readonly form = this.fb.nonNullable.group({
-    title: ['', [Validators.required, Validators.minLength(3)]], categoryId: ['portrait', Validators.required], description: ['', [Validators.required, Validators.minLength(40)]], coverImage: [COVERS[0]],
+    title: ['', [Validators.required, Validators.minLength(3)]], categoryId: ['portrait', Validators.required], description: ['', [Validators.required, Validators.minLength(40)]], coverImage: [''],
     pricingModel: ['fixed' as PricingModel], basePrice: [null as number | null], durationMinutes: [120, [Validators.required, Validators.min(15)]], travelRules: [''],
     editedPhotos: [30, Validators.min(0)], deliveryDays: [14, Validators.min(1)], deliverables: [''], addOns: this.fb.array<ReturnType<ServiceWizardPage['newAddOn']>>([]),
   });
@@ -93,7 +94,7 @@ export class ServiceWizardPage {
     effect(() => {
       const list = this.res.value(); if (!list || this.loaded || !this.id) return; this.loaded = true;
       const s = list.find(x => x.id === this.id); if (!s) { this.error.set('Service not found.'); return; } this.current = s;
-      this.form.patchValue({ title: s.title, categoryId: s.categoryId, description: s.description, coverImage: s.coverImage, pricingModel: s.pricingModel, basePrice: s.basePrice, durationMinutes: s.durationMinutes, travelRules: s.travelRules, editedPhotos: s.editedPhotos, deliveryDays: s.deliveryDays, deliverables: s.deliverables.join('\n') });
+      this.form.patchValue({ title: s.title, categoryId: s.categoryId, description: s.description, coverImage: s.coverImage ?? '', pricingModel: s.pricingModel, basePrice: s.basePrice, durationMinutes: s.durationMinutes, travelRules: s.travelRules, editedPhotos: s.editedPhotos, deliveryDays: s.deliveryDays, deliverables: s.deliverables.join('\n') });
       for (const a of s.addOns) this.addOns.push(this.newAddOn(a.id, a.name, a.price));
     });
   }

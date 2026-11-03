@@ -19,7 +19,7 @@ import { AREAS, NavArea } from './nav.config';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <a class="skip-link" [routerLink]="[]" queryParamsHandling="preserve" fragment="main">Skip to content</a>
-  <div class="app" [class.admin]="areaKey() === 'admin'">
+  <div class="app" [class.admin]="areaKey() === 'admin'" [class.studio-theme]="areaKey() === 'studio'">
     <aside class="sb" [class.open]="open()" aria-label="Section navigation">
       <div class="brand"><app-logo [light]="true" /></div>
       <div class="area">{{ area().title }}</div>
