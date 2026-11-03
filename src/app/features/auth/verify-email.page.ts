@@ -1,3 +1,4 @@
+import { SplashService } from '../../core/Splash.service';
 import { ChangeDetectionStrategy, Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -43,6 +44,7 @@ export class VerifyEmailPage implements OnDestroy {
   readonly form = this.fb.nonNullable.group({ otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]] });
   private timer = setInterval(() => this.cooldown.update(c => Math.max(0, c - 1)), 1000);
 
+  private splash = inject(SplashService);
   constructor() { inject(SeoService).set('Verify your email'); }
   ngOnDestroy(): void { clearInterval(this.timer); }
 
@@ -50,7 +52,7 @@ export class VerifyEmailPage implements OnDestroy {
     if (this.form.invalid) { this.form.markAllAsTouched(); this.error.set('Enter the 6 digits from the email.'); return; }
     this.loading.set(true); this.error.set(''); this.info.set('');
     this.auth.verifyEmail(this.email(), this.form.controls.otp.value).subscribe({
-      next: s => void this.router.navigateByUrl(this.auth.homeFor(s.role)),
+      next: s => { this.splash.show(); void this.router.navigateByUrl(this.auth.homeFor(s.role)); },
       error: (e: ApiError) => { this.loading.set(false); this.error.set(this.message(e)); if (e.retryAfterSeconds) this.cooldown.set(e.retryAfterSeconds); },
     });
   }

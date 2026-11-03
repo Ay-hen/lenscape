@@ -1,3 +1,4 @@
+import { SplashService } from '../../core/Splash.service';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -42,6 +43,7 @@ export class RegisterPage {
     name: ['', [Validators.required, Validators.minLength(3)]], username: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._]{3,30}$/)]], email: ['', [Validators.required, Validators.email]],
     phone: [''], city: ['Casablanca'], password: ['', [Validators.required, Validators.minLength(8)]], confirm: ['', Validators.required], terms: [false, Validators.requiredTrue],
   }, { validators: passwordsMatch('password', 'confirm') });
+  private splash = inject(SplashService);
   constructor() { inject(SeoService).set('Create account'); }
   submit() {
     if (this.photographer()) this.form.controls.phone.addValidators(Validators.required); else this.form.controls.phone.clearValidators();
@@ -51,7 +53,7 @@ export class RegisterPage {
     const v = this.form.getRawValue();
     const req$ = this.photographer() ? this.auth.registerPhotographer({ name: v.name, username: v.username, email: v.email, password: v.password, phone: v.phone, city: v.city }) : this.auth.registerCustomer({ name: v.name, username: v.username, email: v.email, password: v.password });
     req$.subscribe({
-      next: r => void this.router.navigate(['/verify-email'], { queryParams: { email: r.email, expires: r.otpExpiresInSeconds } }),
+      next: r => { this.splash.show(); void this.router.navigate(['/verify-email'], { queryParams: { email: r.email, expires: r.otpExpiresInSeconds } }); },
       error: e => { this.loading.set(false); this.error.set(applyServerErrors(this.form, e)); },
     });
   }

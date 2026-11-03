@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { applyServerErrors } from '../../core/util/forms';
 import { FieldComponent } from '../../shared/ui/field.component';
 import { SeoService } from '../../core/seo.service';
+import { SplashService } from '../../core/Splash.service';
 
 @Component({
   selector: 'app-login',
@@ -31,12 +32,13 @@ export class LoginPage {
   readonly loading = signal(false); readonly error = signal('');
   readonly expired = !!this.route.snapshot.queryParamMap.get('expired');
   readonly form = this.fb.nonNullable.group({ username: ['', Validators.required], password: ['', Validators.required] });
+  private splash = inject(SplashService);
   constructor() { inject(SeoService).set('Sign in'); }
   submit() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.loading.set(true); this.error.set('');
     this.auth.login(this.form.getRawValue()).subscribe({
-      next: s => { const ret = this.route.snapshot.queryParamMap.get('returnUrl'); void this.router.navigateByUrl(ret && ret.startsWith('/') && !ret.startsWith('//') ? ret : this.auth.homeFor(s.role)); },
+      next: s => { this.splash.show(); const ret = this.route.snapshot.queryParamMap.get('returnUrl'); void this.router.navigateByUrl(ret && ret.startsWith('/') && !ret.startsWith('//') ? ret : this.auth.homeFor(s.role)); },
       error: e => { this.loading.set(false); this.error.set(applyServerErrors(this.form, e)); },
     });
   }

@@ -27,8 +27,32 @@
       } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
     })();
   </script>
+  <style>
+    /* Launch splash: logo centred on a clean screen, zooms away once the app is ready (see src/app/core/splash.ts). */
+    #splash { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #fff; transition: opacity .45s ease .2s; }
+    [data-theme="dark"] #splash { background: #0e0e10; }
+    #splash svg { width: 84px; height: 84px; animation: splash-in .6s cubic-bezier(.2,.8,.2,1) both, splash-breathe 1.6s ease-in-out .6s infinite; will-change: transform; }
+    #splash .ring { transform-origin: 32px 32px; animation: splash-aperture 1.6s ease-in-out infinite; }
+    #splash.cover { animation: splash-cover .18s ease-out both; }
+    #splash.cover svg { animation: splash-breathe 1.6s ease-in-out infinite; }
+    #splash.out { opacity: 0; pointer-events: none; }
+    #splash.out svg { animation: splash-zoom .75s cubic-bezier(.7,0,.2,1) forwards; }
+    @keyframes splash-cover { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes splash-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+    @keyframes splash-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes splash-aperture { 0%, 100% { transform: scale(1); } 50% { transform: scale(.88); } }
+    @keyframes splash-zoom { 0% { transform: scale(1); } 22% { transform: scale(.86); } 100% { transform: scale(26); } }
+    @media (prefers-reduced-motion: reduce) {
+      #splash svg, #splash .ring { animation: none; }
+      #splash.out svg { animation: none; }
+      #splash { transition: opacity .2s linear; }
+    }
+  </style>
 </head>
 <body>
+  <div id="splash" role="status" aria-label="Loading Lenscape">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#b8401f"/><circle class="ring" cx="32" cy="32" r="15" fill="none" stroke="#fff" stroke-width="5"/><circle cx="32" cy="32" r="5" fill="#fff"/></svg>
+  </div>
   <app-root></app-root>
   <noscript>Lenscape needs JavaScript to run.</noscript>
 </body>
