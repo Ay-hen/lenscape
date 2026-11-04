@@ -16,13 +16,14 @@ export const routes: Routes = [
       { path: 'photographers/:id', loadComponent: () => import('./features/profile/profile.page').then(m => m.ProfilePage) },
       { path: 'book/:id', canActivate: [roleGuard('client')], loadComponent: () => import('./features/booking/booking.page').then(m => m.BookingPage) },
       { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/auth/login.page').then(m => m.LoginPage) },
+      { path: 'forgot-password', canActivate: [guestGuard], loadComponent: () => import('./features/auth/forgot-password.page').then(m => m.ForgotPasswordPage) },
+      // Old two-page flow: the whole recovery now happens on /forgot-password (the reset token is never put in a URL).
+      { path: 'reset-password', pathMatch: 'full', redirectTo: 'forgot-password' },
       { path: 'verify-email', canActivate: [guestGuard], loadComponent: () => import('./features/auth/verify-email.page').then(m => m.VerifyEmailPage) },
       { path: 'register', canActivate: [guestGuard], loadComponent: () => import('./features/auth/register.page').then(m => m.RegisterPage), data: { mode: 'customer' } },
       { path: 'register/photographer', canActivate: [guestGuard], loadComponent: () => import('./features/auth/register.page').then(m => m.RegisterPage), data: { mode: 'photographer' } },
     ],
   },
-  { path: 'forgot-password', canActivate: [guestGuard], loadComponent: () => import('./features/auth/forgot-password.page').then(m => m.ForgotPasswordPage) },
-      { path: 'reset-password', canActivate: [guestGuard], loadComponent: () => import('./features/auth/reset-password.page').then(m => m.ResetPasswordPage) },
   {
     path: 'account',
     canActivate: [roleGuard('client')], canActivateChild: [roleGuard('client')],
