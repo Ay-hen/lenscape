@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 
 const MESSAGES: Record<string, (e: any, label: string) => string> = {
@@ -9,10 +9,12 @@ const MESSAGES: Record<string, (e: any, label: string) => string> = {
 
 /**
  * Label + control + accessible validation message. The <label> wraps the control, so no id plumbing is needed.
- * Uses default change detection on purpose: reactive-form control state is mutable and not signal-based.
+ * Eager (the pre-Angular-22 "default") change detection on purpose: reactive-form control state is mutable and not signal-based. Since Angular 22 the
+ * default is OnPush, which would leave validation messages unrendered after markAllAsTouched()/setErrors(), so the strategy is explicit.
  */
 @Component({
   selector: 'app-field',
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<label class="field"><span class="field__label">{{ label() }}@if (required()) { <span aria-hidden="true"> *</span> }</span><ng-content />@if (hint() && !error) { <span class="field__hint">{{ hint() }}</span> }</label>@if (error; as e) { <div class="field__error" role="alert">{{ e }}</div> }`,
   styles: `:host { display: block; min-width: 0; } .field__error { margin-top: 6px; }`,
 })

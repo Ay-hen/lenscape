@@ -35,7 +35,9 @@ class FakeAuthRepository extends AuthRepository {
     return u ? of(u) : throwError(() => new ApiError('UNAUTHENTICATED', 'Sign in required.', 401));
   }
 
-  forgotPassword(): Observable<{ expiresInSeconds: number }> { return of({ expiresInSeconds: 600 }); }
+  forgotPassword(): Observable<{ expiresInSeconds: number; resendAfterSeconds: number }> { return of({ expiresInSeconds: 300, resendAfterSeconds: 60 }); }
+  resendResetCode(): Observable<{ expiresInSeconds: number; resendAfterSeconds: number }> { return of({ expiresInSeconds: 300, resendAfterSeconds: 60 }); }
+  verifyResetCode(): Observable<{ resetToken: string; expiresInSeconds: number }> { return of({ resetToken: 't', expiresInSeconds: 600 }); }
   resetPassword(): Observable<void> { return of(undefined); }
 }
 
