@@ -3,7 +3,7 @@ import {
   AdminOverview, Album, Application, AuditEntry, AutomationSettings, AvailabilityRules, Booking, BookingQuery, BookingStatus,
   Category, ChatMessage, ContentReport, CreateBookingRequest, Conversation, CustomerProfile, DateRange, GeoPoint, ISODate,
   LoginRequest, AppNotification, Page, PageQuery, PhotographerProfile, PhotographerQuery, PhotographerSummary, PlatformSettings,
-  PortfolioImage, PriceBreakdown, ProfileCompletion, PromoCode, QuoteRequest, RegisterCustomerRequest, RegisterPhotographerRequest, RegistrationStarted, Review, Service,
+  PortfolioImage, PriceBreakdown, ProfileCompletion, PromoCode, QuoteRequest, RegisterCustomerRequest, RegisterPhotographerRequest, RegistrationStarted, PasswordResetCodeSent, PasswordResetGrant, Review, Service,
   ServicePackage, Session, Slot, User, MessageTemplate, Series, LocationInput } from '../models';
 
 /**
@@ -23,8 +23,10 @@ export abstract class AuthRepository {
   /** @endpoint (legacy) POST /user/auth/logout — revokes the token it is given */ abstract logout(token: string): Observable<void>;
   /** @endpoint NEW GET /user/me */ abstract me(): Observable<User>;
   /** @endpoint NEW POST /auth/password */ abstract changePassword(current: string, next: string): Observable<void>;
-  /** @endpoint NEW POST /auth/password/forgot — e-mails a 6-digit code; always answers the same, whether or not the address has an account */ abstract forgotPassword(email: string): Observable<{ expiresInSeconds: number }>;
-  /** @endpoint NEW POST /auth/password/reset — checks the code, sets the new password and signs the account out everywhere */ abstract resetPassword(email: string, otp: string, password: string): Observable<void>;
+  /** @endpoint NEW POST /auth/password/forgot — e-mails a 6-digit code; always answers the same, whether or not the address has an account */ abstract forgotPassword(email: string): Observable<PasswordResetCodeSent>;
+  /** @endpoint NEW POST /auth/password/resend — a new code (the old one stops working); same answer as forgot, cooldown enforced silently */ abstract resendResetCode(email: string): Observable<PasswordResetCodeSent>;
+  /** @endpoint NEW POST /auth/password/verify — checks the code and returns the single-use reset token (400 INVALID_CODE, 429 after too many wrong codes) */ abstract verifyResetCode(email: string, otp: string): Observable<PasswordResetGrant>;
+  /** @endpoint NEW POST /auth/password/reset — token + new password; consumes the token and signs the account out everywhere (400 INVALID_RESET_TOKEN) */ abstract resetPassword(email: string, resetToken: string, password: string): Observable<void>;
 }
 
 export abstract class CustomerRepository {

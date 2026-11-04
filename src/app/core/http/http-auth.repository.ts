@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { AuthRepository, CustomerRepository } from '../api/repositories';
-import { CustomerProfile, LoginRequest, RegisterCustomerRequest, RegisterPhotographerRequest, RegistrationStarted, Role, Session, User } from '../models';
+import { CustomerProfile, LoginRequest, RegisterCustomerRequest, RegisterPhotographerRequest, RegistrationStarted, PasswordResetCodeSent, PasswordResetGrant, Role, Session, User } from '../models';
 import { useApi } from './api';
 
 interface AuthResponse { token: string; role: Role; user: User }
+const toCodeSent = (r: Partial<PasswordResetCodeSent> | null): PasswordResetCodeSent => ({ expiresInSeconds: r?.expiresInSeconds ?? 300, resendAfterSeconds: r?.resendAfterSeconds ?? 60 });
 const toSession = (r: AuthResponse): Session => ({ token: r.token, role: r.user.role, user: r.user });
 
 /**
@@ -25,10 +26,13 @@ export class HttpAuthRepository extends AuthRepository {
   override logout(token: string): Observable<void> { return this.api.http.post<void>(this.api.url('/user/auth/logout'), null, { headers: { Authorization: `Bearer ${token}` } }); }
   override me(): Observable<User> { return this.api.get<User>('/user/me'); }
   override changePassword(current: string, next: string): Observable<void> { return this.api.post<void>('/auth/password', { current, next }); }
-  /** Password recovery step 1: always the same answer, whether or not an account uses the address. */
-  override forgotPassword(email: string): Observable<{ expiresInSeconds: number }> { return this.api.post<{ expiresInSeconds?: number }>('/auth/password/forgot', { email }).pipe(map(r => ({ expiresInSeconds: r?.expiresInSeconds ?? 600 }))); }
-  /** Password recovery step 2: the backend field is `password` (not newPassword). */
-  override resetPassword(email: string, otp: string, password: string): Observable<void> { return this.api.post<unknown>('/auth/password/reset', { email, otp, password }).pipe(map(() => undefined)); }
+  /** Password recovery stage 1: always the same answer, whether or not an account uses the address. */
+  override forgotPassword(email: string): Observable<PasswordResetCodeSent> { return this.api.post<Partial<PasswordResetCodeSent>>('/auth/password/forgot', { email }).pipe(map(toCodeSent)); }
+  override resendResetCode(email: string): Observable<PasswordResetCodeSent> { return this.api.post<Partial<PasswordResetCodeSent>>('/auth/password/resend', { email }).pipe(map(toCodeSent)); }
+  /** Stage 2: the e-mailed code is exchanged for a single-use reset token. */
+  override verifyResetCode(email: string, otp: string): Observable<PasswordResetGrant> { return this.api.post<PasswordResetGrant>('/auth/password/verify', { email, otp }); }
+  /** Stage 3: the reset token (never the code) authorises the new password; the backend field is `password`. */
+  override resetPassword(email: string, resetToken: string, password: string): Observable<void> { return this.api.post<unknown>('/auth/password/reset', { email, resetToken, password }).pipe(map(() => undefined)); }
 }
 
 /** GET/PUT /customers/me */

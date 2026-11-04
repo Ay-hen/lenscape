@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthRepository } from '../api/repositories';
-import { LoginRequest, RegisterCustomerRequest, RegisterPhotographerRequest, Role, Session, User, RegistrationStarted } from '../models';
+import { LoginRequest, RegisterCustomerRequest, RegisterPhotographerRequest, Role, Session, User, RegistrationStarted, PasswordResetCodeSent, PasswordResetGrant } from '../models';
 import { isExpired } from './jwt';
 import { SessionStore, isRole } from './session.store';
 
@@ -30,10 +30,14 @@ export class AuthService {
   registerPhotographer(req: RegisterPhotographerRequest): Observable<RegistrationStarted> { return this.repo.registerPhotographer(req); }
   verifyEmail(email: string, otp: string): Observable<Session> { return this.repo.verifyEmail(email, otp).pipe(tap(s => this.accept(s))); }
   resendCode(email: string): Observable<void> { return this.repo.resendCode(email); }
-  /** Password recovery step 1: e-mails a code (same answer for unknown addresses). */
-  forgotPassword(email: string): Observable<{ expiresInSeconds: number }> { return this.repo.forgotPassword(email); }
-  /** Password recovery step 2: the code + new password. Does NOT sign in; the person logs in with the new password. */
-  resetPassword(email: string, otp: string, password: string): Observable<void> { return this.repo.resetPassword(email, otp, password); }
+  /** Password recovery, stage 1: e-mails a code (same answer for unknown addresses). */
+  forgotPassword(email: string): Observable<PasswordResetCodeSent> { return this.repo.forgotPassword(email); }
+  /** Password recovery: a new code (the previous one stops working). */
+  resendResetCode(email: string): Observable<PasswordResetCodeSent> { return this.repo.resendResetCode(email); }
+  /** Password recovery, stage 2: exchanges the e-mailed code for the single-use reset token. */
+  verifyResetCode(email: string, otp: string): Observable<PasswordResetGrant> { return this.repo.verifyResetCode(email, otp); }
+  /** Password recovery, stage 3: reset token + new password. Does NOT sign in; the person logs in with the new password. */
+  resetPassword(email: string, resetToken: string, password: string): Observable<void> { return this.repo.resetPassword(email, resetToken, password); }
   logout(): void {
     const token = this.store.session()?.token;
     this.verified = null;
