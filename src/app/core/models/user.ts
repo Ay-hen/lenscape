@@ -35,4 +35,8 @@ export interface LoginRequest { username: string; password: string }
 export interface RegisterCustomerRequest { name: string; username: string; email: string; password: string }
 export interface RegisterPhotographerRequest extends RegisterCustomerRequest { phone: string; city: string }
 /** Answer of registration: no account exists yet — a 6-digit code was e-mailed and must be confirmed (see AuthRepository.verifyEmail). */
+/** Answer of POST /auth/password/forgot|resend: always the same, whether or not an account uses the address. */
+export interface PasswordResetCodeSent { expiresInSeconds: number; resendAfterSeconds: number }
+/** Answer of POST /auth/password/verify: the single-use, short-lived authorisation that the final reset step requires. */
+export interface PasswordResetGrant { resetToken: string; expiresInSeconds: number }
 export interface RegistrationStarted { message: string; email: string; verificationRequired: boolean; otpExpiresInSeconds: number }
